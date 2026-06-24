@@ -15,9 +15,12 @@ export function checkAnswer(question: Question, userAnswer: string): 'correct' |
     case QuestionType.JUDGE:
       return ua === ca ? 'correct' : 'wrong'
 
-    case QuestionType.MULTIPLE:
-      // 多选题：排序无关
-      return ua.split('').sort().join('') === ca.split('').sort().join('') ? 'correct' : 'wrong'
+    case QuestionType.MULTIPLE: {
+      // 多选题：排序无关，且去除可能存在的逗号、空格等分隔符
+      const cleanUa = ua.replace(/[^A-Z0-9]/g, '').split('').sort().join('')
+      const cleanCa = ca.replace(/[^A-Z0-9]/g, '').split('').sort().join('')
+      return cleanUa === cleanCa ? 'correct' : 'wrong'
+    }
 
     case QuestionType.FILL:
       // 填空题：支持多个答案用 | 分隔
