@@ -11,9 +11,39 @@ export function checkAnswer(question: Question, userAnswer: string): 'correct' |
   if (!ua) return 'pending'
 
   switch (question.type) {
-    case QuestionType.SINGLE:
-    case QuestionType.JUDGE:
-      return ua === ca ? 'correct' : 'wrong'
+    case QuestionType.SINGLE: {
+      const cleanUa = ua.replace(/[^A-Z0-9]/g, '')
+      const caLetterMatch = ca.match(/[A-Z]/)
+      const cleanCa = caLetterMatch ? caLetterMatch[0] : ca.replace(/[^A-Z0-9]/g, '')
+      return cleanUa === cleanCa || ua === ca ? 'correct' : 'wrong'
+    }
+
+    case QuestionType.JUDGE: {
+      const trueValues = ['对', '正确', '是', 'TRUE', 'T', '✓', 'A']
+      const falseValues = ['错', '错误', '否', 'FALSE', 'F', '✗', 'B']
+
+      let uaText = ua
+      if (ua === 'A' || ua === 'B') {
+        try {
+          const opts = JSON.parse(question.options || '[]')
+          const idx = ua.charCodeAt(0) - 65
+          if (opts[idx]) {
+            uaText = String(opts[idx]).toUpperCase().trim()
+          }
+        } catch {}
+      }
+
+      const isUaTrue = trueValues.includes(uaText) || trueValues.includes(ua)
+      const isCaTrue = trueValues.includes(ca)
+      const isUaFalse = falseValues.includes(uaText) || falseValues.includes(ua)
+      const isCaFalse = falseValues.includes(ca)
+
+      if ((isUaTrue || isUaFalse) && (isCaTrue || isCaFalse)) {
+        return (isUaTrue === isCaTrue) ? 'correct' : 'wrong'
+      }
+
+      return uaText === ca || ua === ca ? 'correct' : 'wrong'
+    }
 
     case QuestionType.MULTIPLE: {
       // 多选题：排序无关，且去除可能存在的逗号、空格等分隔符

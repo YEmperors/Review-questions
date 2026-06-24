@@ -13,7 +13,7 @@
 .animate-delay-3 { animation-delay: 0.3s; }
 
 .stat-card {
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   border-radius: 16px !important;
 }
@@ -24,11 +24,11 @@
 }
 
 .stat-icon {
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stat-card:hover .stat-icon {
-  transform: scale(1.1) rotate(5deg);
+  transform: scale(1.08);
 }
 
 /* 玻璃拟态风格卡片 */
@@ -38,7 +38,7 @@
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
-  transition: all 0.15s ease;
+  transition: all 0.3s ease;
   border-radius: 16px !important;
 }
 
@@ -50,7 +50,7 @@
 /* 按钮渐变动画 */
 .gradient-btn {
   background-size: 200% auto !important;
-  transition: 0.15s !important;
+  transition: 0.3s ease !important;
 }
 .gradient-btn:hover {
   background-position: right center !important;

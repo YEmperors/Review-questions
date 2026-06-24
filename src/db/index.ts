@@ -48,9 +48,9 @@ const CREATE_TABLES_SQL = `
 
   CREATE TABLE IF NOT EXISTS ai_settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    api_url TEXT NOT NULL DEFAULT 'https://api.openai.com/v1/chat/completions',
+    api_url TEXT NOT NULL DEFAULT 'https://api.deepseek.com/chat/completions',
     api_key TEXT NOT NULL DEFAULT '',
-    model_name TEXT NOT NULL DEFAULT 'gpt-3.5-turbo',
+    model_name TEXT NOT NULL DEFAULT 'deepseek-chat',
     temperature REAL NOT NULL DEFAULT 0.7
   );
 

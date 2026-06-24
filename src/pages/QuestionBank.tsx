@@ -6,9 +6,12 @@ import {
 import type { MenuProps } from 'antd'
 import {
   PlusOutlined, UploadOutlined, DeleteOutlined, EditOutlined,
-  DatabaseOutlined, DownloadOutlined, StarOutlined, StarFilled
+  DatabaseOutlined, DownloadOutlined, StarOutlined, StarFilled, PlayCircleOutlined
 } from '@ant-design/icons'
 import * as XLSX from 'xlsx'
+import mammoth from 'mammoth'
+import { Document, Packer, Paragraph, TextRun } from 'docx'
+import { useNavigate } from 'react-router-dom'
 import {
   getQuestionBanks, getQuestions, createQuestion, createQuestionsBatch,
   updateQuestion, deleteQuestion, deleteQuestionsBatch, createQuestionBank, deleteQuestionBank,
@@ -31,6 +34,7 @@ const diffLabels: Record<number, { text: string; color: string }> = {
 }
 
 const QuestionBankPage: React.FC = () => {
+  const navigate = useNavigate()
   const [banks, setBanks] = useState<QuestionBank[]>([])
   const [questions, setQuestions] = useState<Question[]>([])
   const [selectedBank, setSelectedBank] = useState<number | undefined>(undefined)
@@ -180,6 +184,15 @@ const QuestionBankPage: React.FC = () => {
     }
   }
 
+  const handlePracticeSelected = () => {
+    if (selectedRowKeys.length === 0) return
+    const selectedQuestions = questions.filter(q => selectedRowKeys.includes(q.id))
+    sessionStorage.setItem('quiz_config', JSON.stringify({ mode: 'practice', timeLimit: null }))
+    sessionStorage.setItem('quiz_questions', JSON.stringify(selectedQuestions))
+    sessionStorage.removeItem('quiz_results')
+    navigate('/quiz')
+  }
+
   const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) return
     Modal.confirm({
@@ -260,8 +273,8 @@ const QuestionBankPage: React.FC = () => {
       for (let i = 1; i < bLines.length; i++) {
         const line = bLines[i]
 
-        // 选项行：A. A、 A: (A) 等
-        const optMatch = line.match(/^([A-Za-z])[.、：:\s)）]\s*(.+)/)
+        // 选项行：A. A、 A: (A) A) 等，去除了单纯的空格匹配以防将普通英文句子（如 I am... A boy...）误判为选项
+        const optMatch = line.match(/^(?:\(|（)?([A-Za-z])[.、：:\)）]\s*(.+)/)
         if (optMatch) {
           options.push(optMatch[2].trim())
           continue
@@ -305,18 +318,25 @@ const QuestionBankPage: React.FC = () => {
         }
       }
 
-      const content = contentLines.join('\n')
+      let content = contentLines.join('\n')
 
       // 自动推断题型
       let type: QuestionType = QuestionType.SINGLE
       if (explicitType) {
         type = explicitType
-      } else if (options.length > 0) {
-        // 答案含多个字母 → 多选
-        const cleanAns = answer.replace(/[,，\s]/g, '')
-        type = cleanAns.length > 1 && /^[A-Za-z]+$/.test(cleanAns)
-          ? QuestionType.MULTIPLE
-          : QuestionType.SINGLE
+      } else if (options.length >= 2) {
+        const upperAns = answer.trim().toUpperCase()
+        // 提取其中所有的纯英文字母（无视任何中文、括号、标点）
+        const englishLetters = upperAns.replace(/[^A-Z]/g, '')
+        // 判断是否提取出的字母全是 A-J、且至少两个、且无重复
+        const isMultipleOpts = /^[A-J]{2,}$/.test(englishLetters) && new Set(englishLetters).size === englishLetters.length
+
+        // 简答题的答案通常很长
+        if (answer.length > 8 && englishLetters.length === 0) {
+          type = QuestionType.SHORT_ANSWER
+        } else {
+          type = isMultipleOpts ? QuestionType.MULTIPLE : QuestionType.SINGLE
+        }
       } else {
         const lowerAns = answer.toLowerCase()
         if (['对', '错', '正确', '错误', 'true', 'false', '是', '否', '✓', '✗'].includes(lowerAns)) {
@@ -327,6 +347,12 @@ const QuestionBankPage: React.FC = () => {
           // 无选项，且不符合判断、填空特征，默认归为简答/问答题
           type = QuestionType.SHORT_ANSWER
         }
+      }
+
+      if (type === QuestionType.SHORT_ANSWER && options.length > 0) {
+        // 如果是简答题但误把带字母的段落提取成了选项，就把它们拼接回题目内容，并清空 options
+        content = content + '\n' + options.map((opt, i) => String.fromCharCode(65 + i) + '. ' + opt).join('\n')
+        options.length = 0
       }
 
       results.push({
@@ -345,18 +371,27 @@ const QuestionBankPage: React.FC = () => {
   }
 
   // ==================== 文件导入 ====================
-  const handleImport = (file: File) => {
-    const isTxt = file.name.endsWith('.txt')
+  const handleImport = async (file: File) => {
     const reader = new FileReader()
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = e.target?.result
-        let questionsToInsert: any[]
+        if (!data) return
 
-        if (isTxt) {
-          // TXT 专用解析器
-          questionsToInsert = parseTxtQuestions(data as string)
+        let questionsToInsert: any[] = []
+
+        if (file.name.endsWith('.docx')) {
+          try {
+            const result = await mammoth.extractRawText({ arrayBuffer: data as ArrayBuffer })
+            const text = result.value
+            questionsToInsert = parseTxtQuestions(text).map(q => ({ ...q, bank_id: importBankId }))
+          } catch (err) {
+            message.error('Word文档解析失败')
+            return
+          }
+        } else if (file.name.endsWith('.txt')) {
+          questionsToInsert = parseTxtQuestions(data as string).map(q => ({ ...q, bank_id: importBankId }))
         } else {
           let jsonData: any[]
           if (file.name.endsWith('.json')) {
@@ -393,11 +428,11 @@ const QuestionBankPage: React.FC = () => {
             if (typeStr) {
               inferredType = mapImportType(typeStr)
             } else if (parsedOptions.length > 0) {
-              // 有选项，如果答案包含多个字母则为多选
-              const cleanAns = answer.replace(/[,，\s]/g, '')
-              inferredType = cleanAns.length > 1 && /^[A-Za-z]+$/.test(cleanAns)
-                ? QuestionType.MULTIPLE
-                : QuestionType.SINGLE
+              // 提取纯英文字母
+              const englishLetters = answer.trim().toUpperCase().replace(/[^A-Z]/g, '')
+              const isMultipleOpts = /^[A-J]{2,}$/.test(englishLetters) && new Set(englishLetters.split('')).size === englishLetters.length
+
+              inferredType = isMultipleOpts ? QuestionType.MULTIPLE : QuestionType.SINGLE
             } else {
               const lowerAns = answer.toLowerCase()
               if (['对', '错', '正确', '错误', 'true', 'false', '是', '否', '✓', '✗'].includes(lowerAns)) {
@@ -537,7 +572,55 @@ D. 黄瓜
     }
   }
 
+  const handleExportWord = async () => {
+    try {
+      const txtContent = `1. 【单选题】1+1等于几？
+A. 1
+B. 2
+C. 3
+D. 4
+答案：B
+解析：基础数学运算。
+
+2. 以下哪些是水果？
+题型：多选题
+A. 苹果
+B. 西红柿
+C. 香蕉
+D. 黄瓜
+答案：AC
+解析：西红柿是蔬菜，不是水果。
+
+3. 地球是圆的（判断题）
+答案：对
+
+4. 中国的首都是___。
+答案：北京
+
+5. 请简述光合作用的过程。
+题型：简答题
+答案：植物利用光能将二氧化碳和水转化为有机物，并释放氧气。`
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: txtContent.split('\n').map(line => new Paragraph({
+            children: [new TextRun(line)]
+          }))
+        }]
+      })
+      const blob = await Packer.toBlob(doc)
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = '导入模板_Word.docx'
+      link.click()
+      message.success('Word 模板已下载')
+    } catch (err) {
+      message.error('导出 Word 失败')
+    }
+  }
+
   const exportMenuItems: MenuProps['items'] = [
+    { key: 'word', label: 'Word 模板 (.docx)', onClick: handleExportWord },
     { key: 'excel', label: 'Excel 模板 (.xlsx)', onClick: handleExportExcel },
     { key: 'csv', label: 'CSV 模板 (.csv)', onClick: handleExportCsv },
     { key: 'txt', label: 'TXT 模板 (.txt)', onClick: handleExportTxt },
@@ -670,9 +753,14 @@ D. 黄瓜
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             {selectedRowKeys.length > 0 && (
-              <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
-                批量删除 ({selectedRowKeys.length})
-              </Button>
+              <>
+                <Button type="primary" style={{ background: '#10b981', borderColor: '#10b981' }} icon={<PlayCircleOutlined />} onClick={handlePracticeSelected}>
+                  练习选中 ({selectedRowKeys.length})
+                </Button>
+                <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+                  批量删除 ({selectedRowKeys.length})
+                </Button>
+              </>
             )}
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddQuestion}>
               添加题目
@@ -806,9 +894,9 @@ D. 黄瓜
                 解析&nbsp;/&nbsp;analysis
               </div>
             </div>
-            {/* TXT */}
+            {/* Word / TXT */}
             <div style={{ background: '#fafafa', border: '1px solid #e8e8e8', borderLeft: '3px solid #52c41a', borderRadius: 6, padding: '8px 10px', fontSize: 12 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#389e0d', marginBottom: 4 }}>📄 TXT — 按编号分块</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#389e0d', marginBottom: 4 }}>📄 Word / TXT （按编号分题）</div>
               <pre style={{
                 background: '#f0f0f0', borderRadius: 4, padding: '6px 8px',
                 fontSize: 11, margin: '0 0 4px', lineHeight: 1.6, color: '#333',
@@ -824,8 +912,10 @@ C.选项三  D.选项四
 3.1+1=___
 答案：2`}</pre>
               <div style={{ color: '#888', lineHeight: 1.5, marginTop: 4 }}>
-                支持在题目中显式声明：<b>1.【多选题】...</b> 或换行写 <b>题型：问答题</b><br />
-                未声明时自动推断：有选项→单/多选 &nbsp;·&nbsp; 答案对/错→判断 &nbsp;·&nbsp; 含___→填空 &nbsp;·&nbsp; 其它→问答
+                支持在题目中显式声明：<b>1.【多选题】..</b> 或换行写 <b>题型：问答题</b><br />
+                <b>未声明时自动推断：</b><br />
+                • 有选项：智能提取纯英文字母，若仅包含A-J且≥2个无重复，则为多选，否则单选。<br />
+                • 无选项：答案对/错→判断 &nbsp;·&nbsp; 含___→填空 &nbsp;·&nbsp; 其它→问答
               </div>
             </div>
           </Col>
@@ -834,7 +924,7 @@ C.选项三  D.选项四
           <Col span={11}>
             <div style={{ fontSize: 12, color: '#555', marginBottom: 4, fontWeight: 500 }}>上传文件</div>
             <Upload.Dragger
-              accept=".xlsx,.xls,.csv,.json,.txt"
+              accept=".xlsx,.xls,.csv,.json,.txt,.docx"
               beforeUpload={handleImport}
               showUploadList={false}
               style={{ borderRadius: 8 }}
@@ -843,7 +933,7 @@ C.选项三  D.选项四
               <div style={{ padding: '12px 0' }}>
                 <DatabaseOutlined style={{ fontSize: 24, color: '#1677ff', display: 'block', marginBottom: 6 }} />
                 <p style={{ fontSize: 13, fontWeight: 500, margin: '0 0 3px', color: '#333' }}>点击或拖拽文件上传</p>
-                <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>Excel · CSV · JSON · TXT</p>
+                <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>Word · Excel · CSV · JSON · TXT</p>
               </div>
             </Upload.Dragger>
             <Dropdown menu={{ items: exportMenuItems }} placement="bottomCenter">

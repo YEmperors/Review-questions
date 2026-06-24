@@ -48,8 +48,33 @@ const AIQuiz: React.FC = () => {
         setAiResult(result)
 
         const questions = parseAIQuestions(result)
-        setParsedQuestions(questions)
-        message.success(`成功生成 ${questions.length} 道题目`)
+        
+        // 自动保存到题库
+        const bankId = values.bank_id || 1
+        const toInsert = questions.map(q => ({
+          type: values.type,
+          content: q.content || '',
+          options: q.options ? JSON.stringify(q.options) : null,
+          answer: typeof q.answer === 'string' ? q.answer : JSON.stringify(q.answer) || '',
+          analysis: q.analysis || null,
+          difficulty: 1,
+          knowledge_point: '',
+          tags: '["AI生成"]',
+          bank_id: bankId
+        }))
+        
+        try {
+          const ids = createQuestionsBatch(toInsert as any)
+          // 将生成的 ID 附加上去（虽然 UI 不一定用，但保持数据完整）
+          const savedQuestions = questions.map((q, i) => ({ ...q, db_id: ids[i] }))
+          setParsedQuestions(savedQuestions)
+          setSaved(true)
+          message.success(`成功生成并自动导入了 ${questions.length} 道题目至题库！`)
+        } catch (e: any) {
+          setParsedQuestions(questions)
+          message.warning(`生成了 ${questions.length} 道题，但自动保存失败: ${e.message}`)
+        }
+
       } catch (err: any) {
         message.error('AI 出题失败：' + err.message)
       }

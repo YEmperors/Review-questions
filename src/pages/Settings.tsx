@@ -18,10 +18,22 @@ const Settings: React.FC = () => {
   const [aiForm] = Form.useForm()
   const [goalForm] = Form.useForm()
   const [saved, setSaved] = useState(false)
+  const [dbPath, setDbPath] = useState<string>('浏览器缓存 (网页端)')
 
   useEffect(() => {
     loadSettings()
+    loadDbPath()
   }, [])
+
+  const loadDbPath = async () => {
+    const electronAPI = (window as any).electronAPI
+    if (electronAPI && electronAPI.dbGetPath) {
+      try {
+        const path = await electronAPI.dbGetPath()
+        if (path) setDbPath(path)
+      } catch (e) { }
+    }
+  }
 
   const loadSettings = () => {
     const settings = getAISettings()
@@ -82,7 +94,11 @@ const Settings: React.FC = () => {
         message.success('AI API 连接测试成功！')
       } else {
         const err = await response.text()
-        message.error(`连接失败: ${response.status} - ${err.slice(0, 100)}`)
+        if (response.status === 405 || response.status === 404) {
+          message.error(`连接被拒绝(${response.status})：请检查【API 地址】是否包含如 /chat/completions 的完整路径，而不仅是域名`)
+        } else {
+          message.error(`连接失败: ${response.status} - ${err.slice(0, 100)}`)
+        }
       }
     } catch (err: any) {
       message.error('连接失败: ' + err.message)
@@ -168,8 +184,8 @@ const Settings: React.FC = () => {
             children: (
               <Card>
                 <Alert
-                  message="支持 OpenAI、DeepSeek、Ollama 等 API"
-                  description="请确保 API 地址和 Key 正确。使用 Ollama 本地模型时，API Key 可留空。"
+                  message="支持接入各类国产与开源 API"
+                  description="为了更快更稳定地体验智能出题功能，推荐使用 DeepSeek、Kimi、智谱 GLM、通义千问等国产 AI 模型。"
                   type="info"
                   showIcon
                   style={{ marginBottom: 24 }}
@@ -178,26 +194,27 @@ const Settings: React.FC = () => {
                 <Form form={aiForm} layout="vertical">
                   <Form.Item name="api_url" label="API 地址"
                     rules={[{ required: true, message: '请输入 API 地址' }]}
-                    extra="OpenAI: https://api.openai.com/v1/chat/completions | DeepSeek: https://api.deepseek.com/chat/completions | Ollama: http://localhost:11434/v1/chat/completions"
+                    extra="DeepSeek: https://api.deepseek.com/chat/completions | 智谱: https://open.bigmodel.cn/api/paas/v4/chat/completions | Kimi: https://api.moonshot.cn/v1/chat/completions | 硅基流动: https://api.siliconflow.cn/v1/chat/completions"
                   >
-                    <Input placeholder="https://api.openai.com/v1/chat/completions" />
+                    <Input placeholder="https://api.deepseek.com/chat/completions" />
                   </Form.Item>
 
                   <Form.Item name="api_key" label="API Key"
-                    extra="OpenAI/DeepSeek 填入 API Key，Ollama 本地模型可留空"
+                    extra="填入您在国产大模型服务商获取的 API Key"
                   >
                     <Input.Password placeholder="sk-..." />
                   </Form.Item>
 
                   <Form.Item name="model_name" label="模型名称"
-                    extra="OpenAI: gpt-3.5-turbo / gpt-4 | DeepSeek: deepseek-chat | Ollama: llama3 等"
+                    extra="DeepSeek: deepseek-chat | 智谱: glm-4 | Kimi: moonshot-v1-8k"
                   >
                     <Select showSearch allowClear placeholder="选择或输入模型名称">
-                      <Option value="gpt-3.5-turbo">GPT-3.5 Turbo</Option>
-                      <Option value="gpt-4">GPT-4</Option>
-                      <Option value="gpt-4o">GPT-4o</Option>
-                      <Option value="deepseek-chat">DeepSeek Chat</Option>
-                      <Option value="deepseek-coder">DeepSeek Coder</Option>
+                      <Option value="deepseek-chat">DeepSeek Chat (深度求索)</Option>
+                      <Option value="deepseek-reasoner">DeepSeek Reasoner (深度求索推理)</Option>
+                      <Option value="glm-4">GLM-4 (智谱清言)</Option>
+                      <Option value="moonshot-v1-8k">Moonshot v1 8k (Kimi)</Option>
+                      <Option value="qwen-max">Qwen Max (通义千问)</Option>
+                      <Option value="doubao-pro-32k">Doubao Pro (豆包)</Option>
                     </Select>
                   </Form.Item>
 
@@ -245,8 +262,11 @@ const Settings: React.FC = () => {
               <Card>
                 <Form layout="vertical">
                   <Form.Item label="数据存储">
-                    <Text type="secondary">
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
                       数据存储在本地 SQLite 数据库中，自动每 3 秒保存一次。
+                    </Text>
+                    <Text copyable style={{ color: '#e2e8f0', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: 6, display: 'inline-block' }}>
+                      {dbPath}
                     </Text>
                   </Form.Item>
 

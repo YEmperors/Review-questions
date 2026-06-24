@@ -35,6 +35,9 @@ export async function callAI(prompt: string): Promise<string> {
 
   if (!response.ok) {
     const err = await response.text()
+    if (response.status === 405 || response.status === 404) {
+      throw new Error(`请求被拒绝 (${response.status})：请检查【设置】中的【API 地址】是否填写完整！必须包含完整路径（如 /chat/completions），不能仅填写域名。`)
+    }
     throw new Error(`AI API 请求失败: ${response.status} - ${err}`)
   }
 
