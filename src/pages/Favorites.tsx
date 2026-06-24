@@ -233,24 +233,26 @@ const Favorites: React.FC = () => {
       ) : (
         <Card
           bordered={false}
-          style={{ borderRadius: 14, background: '#1e1e2e', border: '1px solid rgba(255,255,255,0.06)' }}
-          bodyStyle={{ padding: '0 0 8px' }}
+          style={{ flex: 1, borderRadius: 14, background: '#1e1e2e', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column' }}
+          bodyStyle={{ padding: '0 0 8px', flex: 1, display: 'flex', flexDirection: 'column' }}
         >
-          <Table
-            rowKey="id"
-            columns={columns}
-            dataSource={questions}
-            pagination={{
-              defaultPageSize: 15,
-              showSizeChanger: true,
-              pageSizeOptions: ['15', '30', '50', '100'],
-              showTotal: total => `共 ${total} 题`,
-              style: { padding: '12px 20px 0' }
-            }}
-            size="small"
-            scroll={{ y: 500 }}
-            locale={{ emptyText: <Empty description={<span style={{ color: '#64748b' }}>没有符合条件的题目</span>} /> }}
-          />
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <Table
+              rowKey="id"
+              columns={columns}
+              dataSource={questions}
+              pagination={{
+                defaultPageSize: 15,
+                showSizeChanger: true,
+                pageSizeOptions: ['15', '30', '50', '100'],
+                showTotal: total => `共 ${total} 题`,
+                style: { padding: '12px 20px 0' }
+              }}
+              size="small"
+              scroll={{ y: 'calc(100vh - 350px)' }}
+              locale={{ emptyText: <Empty description={<span style={{ color: '#64748b' }}>没有符合条件的题目</span>} /> }}
+            />
+          </div>
         </Card>
       )}
 
