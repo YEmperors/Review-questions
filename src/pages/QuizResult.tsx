@@ -91,17 +91,7 @@ const QuizResultPage: React.FC = () => {
   const wrongCount = results.filter(r => checkAnswer(r.question, r.userAnswer) === 'wrong').length
   const pendingCount = results.filter(r => checkAnswer(r.question, r.userAnswer) === 'pending').length
   const totalTime = results.reduce((sum, r) => sum + r.timeSpent, 0)
-  const avgTime = Math.round(totalTime / totalCount)
   const accuracy = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0
-
-  // 知识点正确率统计
-  const kpStats: Record<string, { total: number; correct: number }> = {}
-  for (const r of results) {
-    const kp = r.question.knowledge_point || '未分类'
-    if (!kpStats[kp]) kpStats[kp] = { total: 0, correct: 0 }
-    kpStats[kp].total++
-    if (checkAnswer(r.question, r.userAnswer) === 'correct') kpStats[kp].correct++
-  }
 
   const pieData = [
     { name: '正确', value: correctCount, color: '#22c55e' },
@@ -244,7 +234,7 @@ const QuizResultPage: React.FC = () => {
 
       <Row gutter={16} style={{ marginBottom: 20 }}>
         {/* 答题分布饼图 */}
-        <Col span={12}>
+        <Col span={24}>
           <Card
             title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>📊 答题分布</span>}
             bordered={false}
@@ -275,44 +265,6 @@ const QuizResultPage: React.FC = () => {
             ) : (
               <Empty description="暂无数据" style={{ height: 220, display: 'flex', flexDirection: 'column', justifyContent: 'center' }} />
             )}
-          </Card>
-        </Col>
-
-        {/* 知识点表现 */}
-        <Col span={12}>
-          <Card
-            title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>🎯 知识点表现</span>}
-            bordered={false}
-            style={{ borderRadius: 14, height: '100%' }}
-            bodyStyle={{ maxHeight: 260, overflowY: 'auto' }}
-          >
-            <List
-              size="small"
-              dataSource={Object.entries(kpStats)}
-              renderItem={([kp, stat]) => {
-                const rate = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0
-                const color = rate >= 70 ? '#22c55e' : rate >= 50 ? '#f59e0b' : '#ef4444'
-                return (
-                  <List.Item style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ width: '100%' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <Text style={{ fontSize: 13, color: '#cbd5e1' }}>{kp}</Text>
-                        <Text style={{ fontSize: 12, color }}>
-                          {stat.correct}/{stat.total} ({rate}%)
-                        </Text>
-                      </div>
-                      <Progress
-                        percent={rate}
-                        size="small"
-                        strokeColor={color}
-                        trailColor="rgba(255,255,255,0.06)"
-                        showInfo={false}
-                      />
-                    </div>
-                  </List.Item>
-                )
-              }}
-            />
           </Card>
         </Col>
       </Row>
@@ -375,12 +327,6 @@ const QuizResultPage: React.FC = () => {
                   }
                   description={
                     <Space size={8} style={{ marginTop: 4 }}>
-                      <Tag style={{
-                        background: 'rgba(99,102,241,0.12)', border: 'none',
-                        color: '#818cf8', fontSize: 11, borderRadius: 4, margin: 0,
-                      }}>
-                        {item.question.knowledge_point}
-                      </Tag>
                       <Text style={{ fontSize: 11, color: '#ef4444' }}>
                         我的: {item.userAnswer}
                       </Text>

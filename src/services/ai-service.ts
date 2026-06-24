@@ -1,5 +1,5 @@
 import { getAISettings } from '../db/repositories'
-import { QuestionType, Difficulty } from '../types'
+import { QuestionType } from '../types'
 
 /**
  * AI 服务 - 出题与解题
@@ -46,9 +46,8 @@ export async function callAI(prompt: string): Promise<string> {
  * AI 出题
  */
 export async function generateQuestionWithAI(
-  knowledgePoint: string,
+  topic: string,
   type: QuestionType,
-  difficulty: Difficulty,
   count: number = 1
 ): Promise<string> {
   const typeNames: Record<QuestionType, string> = {
@@ -59,13 +58,8 @@ export async function generateQuestionWithAI(
     [QuestionType.SHORT_ANSWER]: '简答题',
     [QuestionType.CODING]: '编程题'
   }
-  const diffNames: Record<Difficulty, string> = {
-    [Difficulty.EASY]: '简单',
-    [Difficulty.MEDIUM]: '中等',
-    [Difficulty.HARD]: '困难'
-  }
 
-  const prompt = `请生成 ${count} 道"${knowledgePoint}"相关的${typeNames[type]}，难度为${diffNames[difficulty]}。
+  const prompt = `请生成 ${count} 道"${topic}"相关的${typeNames[type]}。
 
 请严格按照以下JSON格式输出（数组），不要输出其他内容：
 [

@@ -286,14 +286,6 @@ const QuizPage: React.FC = () => {
             }}>
               {typeLabels[currentQuestion.type]}
             </Tag>
-            <Tag style={{
-              background: diffLabels[currentQuestion.difficulty]?.bg,
-              border: 'none',
-              color: diffLabels[currentQuestion.difficulty]?.color,
-              borderRadius: 6, padding: '2px 10px',
-            }}>
-              {diffLabels[currentQuestion.difficulty]?.text}
-            </Tag>
             <Text style={{ color: '#64748b', fontSize: 13 }}>
               {currentIndex + 1} / {questions.length}
             </Text>
@@ -347,18 +339,6 @@ const QuizPage: React.FC = () => {
         }}
         bodyStyle={{ padding: '28px 32px' }}
       >
-        {/* 知识点标签 */}
-        <div style={{ marginBottom: 20 }}>
-          <Tag style={{
-            background: 'rgba(99,102,241,0.15)',
-            border: '1px solid rgba(99,102,241,0.3)',
-            color: '#818cf8',
-            borderRadius: 6, padding: '3px 12px', fontSize: 12,
-          }}>
-            📚 {currentQuestion.knowledge_point}
-          </Tag>
-        </div>
-
         {/* 题目内容 */}
         <div style={{
           fontSize: 16,

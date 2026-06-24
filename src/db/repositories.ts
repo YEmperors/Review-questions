@@ -1,4 +1,4 @@
-import { Question, QuestionBank, QuizRecord, SpacedRepetition, AISettings, QuestionType, Difficulty } from '../types'
+import { Question, QuestionBank, QuizRecord, SpacedRepetition, AISettings, QuestionType } from '../types'
 import dbManager from './index'
 
 /**
@@ -99,8 +99,6 @@ export function deleteAllQuestionBanks(): void {
 export function getQuestions(filters?: {
   bankId?: number
   types?: QuestionType[]
-  difficulty?: Difficulty
-  knowledgePoint?: string
   keyword?: string
 }): Question[] {
   const conditions: string[] = []
@@ -118,17 +116,10 @@ export function getQuestions(filters?: {
     // 向后兼容旧的 type 单值筛选
     // （已废弃，保留以防万一）
   }
-  if (filters?.difficulty !== undefined) {
-    conditions.push('difficulty = ?')
-    params.push(filters.difficulty)
-  }
-  if (filters?.knowledgePoint) {
-    conditions.push('knowledge_point = ?')
-    params.push(filters.knowledgePoint)
-  }
+
   if (filters?.keyword) {
-    conditions.push('(content LIKE ? OR knowledge_point LIKE ?)')
-    params.push(`%${filters.keyword}%`, `%${filters.keyword}%`)
+    conditions.push('content LIKE ?')
+    params.push(`%${filters.keyword}%`)
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
@@ -139,8 +130,6 @@ export function getQuestions(filters?: {
 export function getQuestionsLegacy(filters?: {
   bankId?: number
   type?: QuestionType
-  difficulty?: Difficulty
-  knowledgePoint?: string
   keyword?: string
 }): Question[] {
   if (filters?.type) {
@@ -170,8 +159,8 @@ export function getQuestionsByIds(ids: number[]): Question[] {
 export function createQuestion(q: Omit<Question, 'id' | 'created_at'>): number {
   const db = dbManager.getDb()
   db.run(
-    'INSERT INTO questions (type, content, options, answer, analysis, difficulty, knowledge_point, tags, bank_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [q.type, q.content, q.options, q.answer, q.analysis, q.difficulty, q.knowledge_point, q.tags, q.bank_id]
+    'INSERT INTO questions (type, content, options, answer, analysis,  tags, bank_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [q.type, q.content, q.options, q.answer, q.analysis,  q.tags, q.bank_id]
   )
   const row = selectOne<{ id: number }>('SELECT last_insert_rowid() as id')
   dbManager.markDirty()
@@ -186,8 +175,8 @@ export function createQuestionsBatch(questions: Omit<Question, 'id' | 'created_a
   try {
     for (const q of questions) {
       db.run(
-        'INSERT INTO questions (type, content, options, answer, analysis, difficulty, knowledge_point, tags, bank_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [q.type, q.content, q.options, q.answer, q.analysis, q.difficulty, q.knowledge_point, q.tags, q.bank_id]
+        'INSERT INTO questions (type, content, options, answer, analysis,  tags, bank_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [q.type, q.content, q.options, q.answer, q.analysis,  q.tags, q.bank_id]
       )
       const row = selectOne<{ id: number }>('SELECT last_insert_rowid() as id')
       if (row) ids.push(row.id)
@@ -206,7 +195,7 @@ export function updateQuestion(q: Question): void {
   const db = dbManager.getDb()
   db.run(
     'UPDATE questions SET type=?, content=?, options=?, answer=?, analysis=?, difficulty=?, knowledge_point=?, tags=?, bank_id=? WHERE id=?',
-    [q.type, q.content, q.options, q.answer, q.analysis, q.difficulty, q.knowledge_point, q.tags, q.bank_id, q.id]
+    [q.type, q.content, q.options, q.answer, q.analysis,  q.tags, q.bank_id, q.id]
   )
   dbManager.markDirty()
 }
@@ -324,8 +313,6 @@ export function getWrongQuestionsWithQuestions(knowledgePoint?: string): (QuizRe
           options: r.q_options,
           answer: r.q_answer,
           analysis: r.q_analysis,
-          difficulty: r.q_difficulty,
-          knowledge_point: r.q_knowledge_point,
           tags: r.q_tags,
           bank_id: r.q_bank_id,
           created_at: r.q_created_at

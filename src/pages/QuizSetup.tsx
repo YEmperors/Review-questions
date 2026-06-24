@@ -10,7 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { getQuestionBanks, getQuestions, getQuestionCount, getKnowledgePoints } from '../db/repositories'
 import { getSmartQuestions } from '../services/adaptive-difficulty'
-import { QuestionType, Difficulty, QuizMode } from '../types'
+import { QuestionType, QuizMode } from '../types'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -84,9 +84,7 @@ const QuizSetup: React.FC = () => {
         const questionTypes = values.questionTypes as QuestionType[] | undefined
         questions = getQuestions({
           bankId: values.bankId,
-          types: questionTypes && questionTypes.length > 0 ? questionTypes : undefined,
-          difficulty: values.difficulty,
-          knowledgePoint: values.knowledgePoint
+          types: questionTypes && questionTypes.length > 0 ? questionTypes : undefined
         })
 
         if (values.questionCount && questions.length > values.questionCount) {
@@ -208,15 +206,6 @@ const QuizSetup: React.FC = () => {
                   </Select>
                 </Form.Item>
               </Col>
-              <Col span={12}>
-                <Form.Item name="knowledgePoint" label={<span style={{ color: '#94a3b8' }}>知识点</span>} style={{ marginBottom: 16 }}>
-                  <Select allowClear placeholder="全部知识点">
-                    {knowledgePoints.map(kp => (
-                      <Option key={kp} value={kp}>{kp}</Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
             </Row>
 
             <Row gutter={16}>
@@ -234,19 +223,6 @@ const QuizSetup: React.FC = () => {
                     min={1} max={300} style={{ width: '100%', borderRadius: 8 }}
                     placeholder="不限时"
                   />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item
-                  name="difficulty"
-                  label={<span style={{ color: '#94a3b8' }}>难度</span>}
-                  style={{ marginBottom: 16 }}
-                >
-                  <Select allowClear placeholder="不限">
-                    <Option value={1}><Tag color="success" style={{ margin: 0 }}>简单</Tag></Option>
-                    <Option value={2}><Tag color="warning" style={{ margin: 0 }}>中等</Tag></Option>
-                    <Option value={3}><Tag color="error" style={{ margin: 0 }}>困难</Tag></Option>
-                  </Select>
                 </Form.Item>
               </Col>
             </Row>

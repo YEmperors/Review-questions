@@ -33,8 +33,7 @@ const Favorites: React.FC = () => {
   const navigate = useNavigate()
   const [allQuestions, setAllQuestions] = useState<Question[]>([])
   const [questions, setQuestions] = useState<Question[]>([])
-  const [knowledgePoints, setKnowledgePoints] = useState<string[]>([])
-  const [filterKp, setFilterKp] = useState<string | undefined>(undefined)
+
   const [searchText, setSearchText] = useState('')
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null)
@@ -44,20 +43,16 @@ const Favorites: React.FC = () => {
     const favQuestions = getQuestionsByIds(favIds)
     setAllQuestions(favQuestions)
 
-    const kps = new Set<string>()
-    favQuestions.forEach(q => { if (q.knowledge_point) kps.add(q.knowledge_point) })
-    setKnowledgePoints(Array.from(kps).sort())
-
-    applyFilter(favQuestions, filterKp, searchText)
+    applyFilter(favQuestions, searchText)
   }
 
-  const applyFilter = (qs: Question[], kp?: string, search?: string) => {
+  const applyFilter = (qs: Question[], search?: string) => {
     let filtered = qs
-    if (kp) filtered = filtered.filter(q => q.knowledge_point === kp)
-    if (search) filtered = filtered.filter(q =>
-      q.content.toLowerCase().includes(search.toLowerCase()) ||
-      q.knowledge_point.toLowerCase().includes(search.toLowerCase())
-    )
+    if (search) {
+      filtered = filtered.filter(q =>
+        q.content.toLowerCase().includes(search.toLowerCase())
+      )
+    }
     setQuestions(filtered)
   }
 
@@ -66,8 +61,8 @@ const Favorites: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    applyFilter(allQuestions, filterKp, searchText)
-  }, [filterKp, searchText, allQuestions])
+    applyFilter(allQuestions, searchText)
+  }, [searchText, allQuestions])
 
   const handleRemoveFavorite = (id: number) => {
     toggleFavorite(id)
@@ -104,24 +99,6 @@ const Favorites: React.FC = () => {
         }}>
           {typeLabels[type] || type}
         </Tag>
-      )
-    },
-    {
-      title: '难度', dataIndex: 'difficulty', width: 70,
-      render: (d: number) => (
-        <Tag style={{
-          background: `${diffLabels[d]?.color}18`,
-          border: 'none', color: diffLabels[d]?.color,
-          borderRadius: 6, fontSize: 11, margin: 0,
-        }}>
-          {diffLabels[d]?.text}
-        </Tag>
-      )
-    },
-    {
-      title: '知识点', dataIndex: 'knowledge_point', width: 120,
-      render: (kp: string) => (
-        <Text style={{ fontSize: 12, color: '#94a3b8' }}>{kp}</Text>
       )
     },
     {
@@ -204,24 +181,13 @@ const Favorites: React.FC = () => {
         <Space size={16} wrap>
           <Input
             prefix={<SearchOutlined style={{ color: '#64748b' }} />}
-            placeholder="搜索题目..."
+            placeholder="搜索题目内容"
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
             allowClear
             style={{ width: 220, borderRadius: 8 }}
           />
-          <Select
-            value={filterKp}
-            onChange={setFilterKp}
-            allowClear
-            placeholder="知识点筛选"
-            style={{ width: 180 }}
-          >
-            {knowledgePoints.map(kp => (
-              <Option key={kp} value={kp}>{kp}</Option>
-            ))}
-          </Select>
-          {(filterKp || searchText) && (
+          {searchText && (
             <Text style={{ color: '#64748b', fontSize: 13 }}>
               筛选结果: {questions.length} 题
             </Text>
@@ -308,13 +274,6 @@ const Favorites: React.FC = () => {
                   borderRadius: 6, fontSize: 11, margin: 0,
                 }}>
                   {typeLabels[selectedQuestion.type]}
-                </Tag>
-                <Tag style={{
-                  background: `${diffLabels[selectedQuestion.difficulty]?.color}18`,
-                  border: 'none', color: diffLabels[selectedQuestion.difficulty]?.color,
-                  borderRadius: 6, fontSize: 11, margin: 0,
-                }}>
-                  {diffLabels[selectedQuestion.difficulty]?.text}
                 </Tag>
               </div>
               <Paragraph style={{ color: '#e2e8f0', margin: 0, fontSize: 14, whiteSpace: 'pre-wrap' }}>

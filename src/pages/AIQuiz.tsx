@@ -12,7 +12,7 @@ import {
   generateQuestionWithAI, parseAIQuestions
 } from '../services/ai-service'
 import { createQuestionsBatch, getQuestionBanks } from '../db/repositories'
-import { QuestionType, Difficulty } from '../types'
+import { QuestionType } from '../types'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -41,9 +41,8 @@ const AIQuiz: React.FC = () => {
 
       try {
         const result = await generateQuestionWithAI(
-          values.knowledge_point,
+          values.topic,
           values.type,
-          values.difficulty,
           values.count
         )
         setAiResult(result)
@@ -72,8 +71,8 @@ const AIQuiz: React.FC = () => {
         options: q.options ? JSON.stringify(q.options) : null,
         answer: q.answer || '',
         analysis: q.analysis || null,
-        difficulty: form.getFieldValue('difficulty'),
-        knowledge_point: form.getFieldValue('knowledge_point'),
+        difficulty: 1, // 已废弃，填默认值
+        knowledge_point: '', // 已废弃，填默认值
         tags: '["AI生成"]',
         bank_id: bankId
       }))
@@ -97,8 +96,8 @@ const AIQuiz: React.FC = () => {
       options: q.options ? JSON.stringify(q.options) : null,
       answer: q.answer || '',
       analysis: q.analysis || null,
-      difficulty: form.getFieldValue('difficulty'),
-      knowledge_point: form.getFieldValue('knowledge_point'),
+      difficulty: 1,
+      knowledge_point: '',
       tags: '["AI生成"]',
       bank_id: bankId,
       created_at: new Date().toISOString()
@@ -127,12 +126,11 @@ const AIQuiz: React.FC = () => {
           layout="vertical"
           initialValues={{
             type: 'single',
-            difficulty: 2,
             count: 5,
             bank_id: 1
           }}
         >
-          <Form.Item name="knowledge_point" label="知识点" rules={[{ required: true, message: '请输入知识点' }]}>
+          <Form.Item name="topic" label="出题主题" rules={[{ required: true, message: '请输入出题主题' }]}>
             <Input placeholder="例如：线性代数、TCP协议、光合作用" />
           </Form.Item>
 
@@ -146,14 +144,6 @@ const AIQuiz: React.FC = () => {
                 <Option value="short_answer">简答题</Option>
                 <Option value="coding">编程题</Option>
               </Select>
-            </Form.Item>
-
-            <Form.Item name="difficulty" label="难度" rules={[{ required: true }]}>
-              <Radio.Group>
-                <Radio value={1}>简单</Radio>
-                <Radio value={2}>中等</Radio>
-                <Radio value={3}>困难</Radio>
-              </Radio.Group>
             </Form.Item>
 
             <Form.Item name="count" label="生成数量" rules={[{ required: true }]}>

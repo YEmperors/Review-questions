@@ -118,8 +118,8 @@ const Settings: React.FC = () => {
         选项: q.options ? JSON.parse(q.options).join('\n') : '',
         答案: q.answer,
         解析: q.analysis || '',
-        难度: q.difficulty === 1 ? '简单' : q.difficulty === 2 ? '中等' : '困难',
-        知识点: q.knowledge_point,
+        
+        
         标签: q.tags ? JSON.parse(q.tags).join(',') : ''
       }))
       const ws = XLSX.utils.json_to_sheet(data)
@@ -139,7 +139,7 @@ const Settings: React.FC = () => {
         ID: r.id,
         题目: r.question_content,
         题型: r.question_type,
-        知识点: r.knowledge_point,
+        
         我的答案: r.user_answer,
         是否正确: r.is_correct === 1 ? '正确' : r.is_correct === 2 ? '待评阅' : '错误',
         用时_秒: r.time_spent,
@@ -312,74 +312,74 @@ function loadSampleData() {
         type: 'single', content: 'HTTP 状态码 404 表示什么？',
         options: JSON.stringify(['服务器内部错误', '请求的资源未找到', '请求被拒绝', '服务不可用']),
         answer: 'B', analysis: '404 Not Found 表示服务器找不到请求的资源。',
-        difficulty: 1, knowledge_point: 'HTTP协议', tags: '["基础","高频"]', bank_id: bankId
+        tags: '["基础","高频"]', bank_id: bankId
       },
       {
         type: 'single', content: 'TCP 三次握手的第二步，服务器发送的报文标志位是？',
         options: JSON.stringify(['SYN', 'ACK', 'SYN+ACK', 'FIN']),
         answer: 'C', analysis: '三次握手：客户端发SYN → 服务器发SYN+ACK → 客户端发ACK',
-        difficulty: 2, knowledge_point: 'TCP协议', tags: '["网络"]', bank_id: bankId
+        tags: '["网络"]', bank_id: bankId
       },
       {
         type: 'multiple', content: '以下哪些是 JavaScript 的基本数据类型？',
         options: JSON.stringify(['String', 'Number', 'Array', 'Boolean', 'Object']),
         answer: 'ABD', analysis: 'JS基本类型：String, Number, Boolean, Null, Undefined, Symbol, BigInt。Array和Object是引用类型。',
-        difficulty: 2, knowledge_point: 'JavaScript', tags: '["前端","基础"]', bank_id: bankId
+        tags: '["前端","基础"]', bank_id: bankId
       },
       {
         type: 'judge', content: 'Python 中列表和元组都是可变类型。',
         options: JSON.stringify(['对', '错']),
         answer: 'B', analysis: '元组(tuple)是不可变的，列表(list)是可变的。',
-        difficulty: 1, knowledge_point: 'Python', tags: '["编程"]', bank_id: bankId
+        tags: '["编程"]', bank_id: bankId
       },
       {
         type: 'single', content: '在二叉搜索树中查找一个元素的平均时间复杂度是？',
         options: JSON.stringify(['O(1)', 'O(log n)', 'O(n)', 'O(n log n)']),
         answer: 'B', analysis: '二叉搜索树在平衡情况下，查找平均时间复杂度为 O(log n)。',
-        difficulty: 2, knowledge_point: '数据结构', tags: '["算法"]', bank_id: bankId
+        tags: '["算法"]', bank_id: bankId
       },
       {
         type: 'single', content: 'SQL 中用于删除表数据的命令是？',
         options: JSON.stringify(['DROP', 'DELETE', 'REMOVE', 'TRUNCATE']),
         answer: 'B', analysis: 'DELETE 用于删除表中的数据行。DROP 删除表本身，TRUNCATE 也是删除全部数据但更快。',
-        difficulty: 1, knowledge_point: 'SQL', tags: '["数据库"]', bank_id: bankId
+        tags: '["数据库"]', bank_id: bankId
       },
       {
         type: 'fill', content: 'Git 中，将远程仓库的代码拉取到本地的命令是 git ____。',
         options: null,
         answer: 'pull', analysis: 'git pull 从远程仓库拉取并合并代码。',
-        difficulty: 1, knowledge_point: 'Git', tags: '["工具"]', bank_id: bankId
+        tags: '["工具"]', bank_id: bankId
       },
       {
         type: 'single', content: '操作系统中，进程和线程的主要区别是？',
         options: JSON.stringify(['进程更快', '线程共享进程的资源', '线程更安全', '进程不能包含线程']),
         answer: 'B', analysis: '线程是进程内的执行单元，同一进程的线程共享内存空间和资源。',
-        difficulty: 2, knowledge_point: '操作系统', tags: '["基础"]', bank_id: bankId
+        tags: '["基础"]', bank_id: bankId
       },
       {
         type: 'short_answer', content: '请简述什么是 RESTful API，并列举主要的 HTTP 方法。',
         options: null,
         answer: 'RESTful API 是基于 REST 架构风格的 Web API，使用 HTTP 方法进行 CRUD 操作。主要方法：GET(查询)、POST(创建)、PUT(更新)、DELETE(删除)、PATCH(部分更新)。',
         analysis: 'REST 的核心原则：无状态、统一接口、资源导向。',
-        difficulty: 2, knowledge_point: 'Web开发', tags: '["后端","高频"]', bank_id: bankId
+        tags: '["后端","高频"]', bank_id: bankId
       },
       {
         type: 'single', content: '快速排序算法在最坏情况下的时间复杂度是？',
         options: JSON.stringify(['O(n)', 'O(n log n)', 'O(n²)', 'O(log n)']),
         answer: 'C', analysis: '当每次选择的枢轴都是最大或最小值时（如已排序数组），快排退化为 O(n²)。',
-        difficulty: 3, knowledge_point: '算法', tags: '["排序","高频"]', bank_id: bankId
+        tags: '["排序","高频"]', bank_id: bankId
       },
       {
         type: 'single', content: 'React 中，用于在函数组件中管理状态的 Hook 是？',
         options: JSON.stringify(['useEffect', 'useState', 'useContext', 'useReducer']),
         answer: 'B', analysis: 'useState 是 React 中最基本的 Hook，用于在函数组件中声明状态变量。',
-        difficulty: 1, knowledge_point: 'React', tags: '["前端"]', bank_id: bankId
+        tags: '["前端"]', bank_id: bankId
       },
       {
         type: 'judge', content: 'IPv6 地址长度为 128 位。',
         options: JSON.stringify(['对', '错']),
         answer: 'A', analysis: 'IPv4 是 32 位，IPv6 是 128 位，用 8 组十六进制数表示。',
-        difficulty: 1, knowledge_point: '网络', tags: '["基础"]', bank_id: bankId
+        tags: '["基础"]', bank_id: bankId
       }
     ]
     createQuestionsBatch(sampleQuestions as any)

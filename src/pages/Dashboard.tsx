@@ -278,7 +278,7 @@ const Dashboard: React.FC = () => {
       <div className="animate-delay-3 animate-float-up" style={{ animationFillMode: 'both' }}>
       <Row gutter={16} style={{ marginBottom: 24 }}>
         {/* 答题趋势图 */}
-        <Col span={15}>
+        <Col span={24}>
           <Card
             title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>📈 近14天答题趋势</span>}
             bordered={false}
@@ -314,35 +314,13 @@ const Dashboard: React.FC = () => {
           </Card>
         </Col>
 
-        {/* 知识点掌握雷达图 */}
-        <Col span={9}>
-          <Card
-            title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>🎯 知识点掌握度</span>}
-            bordered={false}
-            className="glass-card"
-            style={{ height: '100%' }}
-            bodyStyle={{ paddingTop: 8 }}
-          >
-            {kpData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <RadarChart data={kpData.slice(0, 6)}>
-                  <PolarGrid stroke="rgba(255,255,255,0.08)" />
-                  <PolarAngleAxis dataKey="knowledge_point" tick={{ fontSize: 10, fill: '#64748b' }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} />
-                  <Radar name="掌握度(%)" dataKey="rate" stroke="#6366f1" fill="#6366f1" fillOpacity={0.2} />
-                </RadarChart>
-              </ResponsiveContainer>
-            ) : (
-              <Empty description={<span style={{ color: '#64748b' }}>暂无数据</span>} style={{ height: 260, display: 'flex', flexDirection: 'column', justifyContent: 'center' }} />
-            )}
-          </Card>
-        </Col>
+        {/* 雷达图已移除 */}
       </Row>
 
       <Row gutter={16}>
         {/* 待复习题目 */}
         {dueQuestions.length > 0 && (
-          <Col span={12}>
+          <Col span={24}>
             <Card
               title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>🔄 待复习题目</span>}
               bordered={false}
@@ -380,13 +358,7 @@ const Dashboard: React.FC = () => {
                           {item.content}
                         </Text>
                       }
-                      description={
-                        <Space size={4}>
-                          <Tag style={{ fontSize: 11, margin: 0, background: 'rgba(99,102,241,0.15)', border: 'none', color: '#818cf8' }}>
-                            {item.knowledge_point}
-                          </Tag>
-                        </Space>
-                      }
+                      description={null}
                     />
                   </List.Item>
                 )}
@@ -395,50 +367,7 @@ const Dashboard: React.FC = () => {
           </Col>
         )}
 
-        {/* 薄弱点提示 */}
-        {weakKps.length > 0 && (
-          <Col span={dueQuestions.length > 0 ? 12 : 24}>
-            <Card
-              title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>⚠️ 薄弱知识点</span>}
-              bordered={false}
-              className="glass-card"
-              extra={
-                <Button
-                  type="link"
-                  size="small"
-                  onClick={() => navigate('/quiz-setup')}
-                  style={{ color: '#ef4444' }}
-                >
-                  针对训练
-                </Button>
-              }
-            >
-              <List
-                size="small"
-                dataSource={weakKps.slice(0, 5)}
-                renderItem={(item) => (
-                  <List.Item style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ width: '100%' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <Text style={{ fontSize: 13, color: '#cbd5e1' }}>{item.knowledge_point}</Text>
-                        <Tag style={{ margin: 0, background: 'rgba(239,68,68,0.15)', border: 'none', color: '#ef4444', fontSize: 11 }}>
-                          {item.rate}%
-                        </Tag>
-                      </div>
-                      <Progress
-                        percent={item.rate}
-                        size="small"
-                        strokeColor="#ef4444"
-                        trailColor="rgba(255,255,255,0.06)"
-                        showInfo={false}
-                      />
-                    </div>
-                  </List.Item>
-                )}
-              />
-            </Card>
-          </Col>
-        )}
+        {/* 薄弱点提示已移除 */}
 
         {/* 空状态 - 没有任何数据 */}
         {dueQuestions.length === 0 && weakKps.length === 0 && (
@@ -457,8 +386,8 @@ const Dashboard: React.FC = () => {
               <Title level={4} style={{ color: '#e2e8f0', margin: 0 }}>准备好开始学习了吗？</Title>
               <Text style={{ color: '#64748b', display: 'block', margin: '8px 0 24px' }}>
                 {stats.totalQuestions === 0
-                  ? '先去题库添加题目，或者导入示例题库来体验'
-                  : '继续坚持学习，知识点掌握情况将在这里展示'}
+                  ? '快去题库添加题目吧'
+                  : '开启你的刷题之旅'}
               </Text>
               <Space>
                 {stats.totalQuestions === 0 && (

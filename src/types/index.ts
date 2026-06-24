@@ -8,12 +8,7 @@ export enum QuestionType {
   CODING = 'coding'        // 编程题
 }
 
-// 难度枚举
-export enum Difficulty {
-  EASY = 1,
-  MEDIUM = 2,
-  HARD = 3
-}
+
 
 // 题目接口
 export interface Question {
@@ -23,8 +18,6 @@ export interface Question {
   options: string | null       // JSON 字符串，选择题选项数组
   answer: string               // 正确答案
   analysis: string | null      // 解析
-  difficulty: Difficulty
-  knowledge_point: string
   tags: string | null          // JSON 字符串，标签数组
   bank_id: number
   created_at: string
@@ -75,8 +68,6 @@ export type QuizMode = 'practice' | 'exam' | 'review' | 'smart'
 export interface QuizConfig {
   mode: QuizMode
   bankId?: number
-  knowledgePoint?: string
-  difficulty?: Difficulty
   questionCount?: number
   timeLimit?: number           // 秒
   questionTypes?: QuestionType[]

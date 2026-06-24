@@ -14,7 +14,7 @@ import {
   updateQuestion, deleteQuestion, deleteQuestionsBatch, createQuestionBank, deleteQuestionBank,
   deleteAllQuestionBanks, getAllQuestionCounts, getKnowledgePoints, toggleFavorite, getFavorites
 } from '../db/repositories'
-import { Question, QuestionBank, QuestionType, Difficulty } from '../types'
+import { Question, QuestionType, QuestionBank } from '../types'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -43,7 +43,6 @@ const QuestionBankPage: React.FC = () => {
   const [form] = Form.useForm()
   const [bankForm] = Form.useForm()
   const [filterType, setFilterType] = useState<string | undefined>(undefined)
-  const [filterKp, setFilterKp] = useState<string | undefined>(undefined)
   const [favSet, setFavSet] = useState<Set<number>>(new Set())
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [importBankId, setImportBankId] = useState<number>(1)
@@ -61,8 +60,7 @@ const QuestionBankPage: React.FC = () => {
     const types = filterType ? [filterType as QuestionType] : undefined
     setQuestions(getQuestions({
       bankId: selectedBank,
-      types,
-      knowledgePoint: filterKp
+      types
     }))
     setKnowledgePoints(getKnowledgePoints(selectedBank))
     setBankCounts(getAllQuestionCounts())
@@ -74,7 +72,7 @@ const QuestionBankPage: React.FC = () => {
 
   useEffect(() => {
     loadQuestions()
-  }, [selectedBank, filterType, filterKp])
+  }, [selectedBank, filterType])
 
   // ==================== 题库分类管理 ====================
   const handleAddBank = () => {
@@ -468,11 +466,11 @@ const QuestionBankPage: React.FC = () => {
 
   // ==================== 导出模板 ====================
   const tableTemplateData = [
-    { 题型: '单选题', 题目: '1+1等于几？', 选项: 'A.1\nB.2\nC.3\nD.4', 答案: 'B', 解析: '1+1=2', 难度: 1, 知识点: '基础数学' },
-    { 题型: '多选题', 题目: '以下哪些是水果？', 选项: 'A.苹果\nB.西红柿\nC.香蕉\nD.黄瓜', 答案: 'A|C', 解析: '苹果和香蕉是水果', 难度: 1, 知识点: '常识' },
-    { 题型: '判断题', 题目: '地球是圆的', 选项: '', 答案: '对', 解析: '地球是近似球体', 难度: 1, 知识点: '地理' },
-    { 题型: '填空题', 题目: '中国的首都是___。', 选项: '', 答案: '北京', 解析: '', 难度: 1, 知识点: '地理' },
-    { 题型: '简答题', 题目: '请简述光合作用的过程。', 选项: '', 答案: '植物利用光能将二氧化碳和水转化为有机物，并释放氧气。', 解析: '', 难度: 2, 知识点: '生物' },
+    { 题型: '单选题', 题目: '1+1等于几？', 选项: 'A.1\nB.2\nC.3\nD.4', 答案: 'B', 解析: '1+1=2' },
+    { 题型: '多选题', 题目: '以下哪些是水果？', 选项: 'A.苹果\nB.西红柿\nC.香蕉\nD.黄瓜', 答案: 'A|C', 解析: '苹果和香蕉是水果' },
+    { 题型: '判断题', 题目: '地球是圆的', 选项: '', 答案: '对', 解析: '地球是近似球体' },
+    { 题型: '填空题', 题目: '中国的首都是___。', 选项: '', 答案: '北京', 解析: '' },
+    { 题型: '简答题', 题目: '请简述光合作用的过程。', 选项: '', 答案: '植物利用光能将二氧化碳和水转化为有机物，并释放氧气。', 解析: '' },
   ]
 
   const handleExportExcel = () => {
@@ -511,8 +509,6 @@ C. 3
 D. 4
 答案：B
 解析：基础数学运算。
-难度：简单
-知识点：数学
 
 2. 以下哪些是水果？
 题型：多选题
@@ -528,7 +524,6 @@ D. 黄瓜
 
 4. 中国的首都是___。
 答案：北京
-知识点：地理
 
 5. 请简述光合作用的过程。
 题型：简答题
@@ -560,11 +555,6 @@ D. 黄瓜
       title: '题型', dataIndex: 'type', width: 80,
       render: (type: string) => <Tag color="blue">{typeLabels[type] || type}</Tag>
     },
-    {
-      title: '难度', dataIndex: 'difficulty', width: 70,
-      render: (d: number) => <Tag color={diffLabels[d]?.color}>{diffLabels[d]?.text}</Tag>
-    },
-    { title: '知识点', dataIndex: 'knowledge_point', width: 120 },
     { title: '正确答案', dataIndex: 'answer', width: 100, ellipsis: true },
     {
       title: '操作', width: 120,
@@ -679,18 +669,7 @@ D. 黄瓜
             <Option value="short_answer">简答题</Option>
             <Option value="coding">编程题</Option>
           </Select>
-          <Text style={{ marginLeft: 16 }}>知识点：</Text>
-          <Select
-            value={filterKp}
-            onChange={setFilterKp}
-            allowClear
-            placeholder="全部"
-            style={{ width: 150 }}
-          >
-            {knowledgePoints.map(kp => (
-              <Option key={kp} value={kp}>{kp}</Option>
-            ))}
-          </Select>
+
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             {selectedRowKeys.length > 0 && (
               <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
@@ -746,7 +725,7 @@ D. 黄瓜
         width={700}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" initialValues={{ type: 'single', difficulty: 2 }}>
+        <Form form={form} layout="vertical" initialValues={{ type: 'single' }}>
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="type" label="题型" rules={[{ required: true }]}>
@@ -761,15 +740,6 @@ D. 黄瓜
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="difficulty" label="难度" rules={[{ required: true }]}>
-                <Radio.Group>
-                  <Radio value={1}>简单</Radio>
-                  <Radio value={2}>中等</Radio>
-                  <Radio value={3}>困难</Radio>
-                </Radio.Group>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
               <Form.Item name="bank_id" label="所属题库">
                 <Select>
                   {banks.map(b => <Option key={b.id} value={b.id}>{b.name}</Option>)}
@@ -777,10 +747,6 @@ D. 黄瓜
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item name="knowledge_point" label="知识点" rules={[{ required: true, message: '请输入知识点' }]}>
-            <Input placeholder="例如：二叉树遍历" />
-          </Form.Item>
 
           <Form.Item name="content" label="题目内容" rules={[{ required: true, message: '请输入题目' }]}>
             <TextArea rows={3} placeholder="题目内容" />
@@ -839,8 +805,7 @@ D. 黄瓜
                 列名（中英均可）：<br />
                 题型&nbsp;/&nbsp;type &nbsp;·&nbsp; 题目&nbsp;/&nbsp;content<br />
                 选项&nbsp;/&nbsp;options &nbsp;·&nbsp; 答案&nbsp;/&nbsp;answer<br />
-                解析&nbsp;/&nbsp;analysis &nbsp;·&nbsp; 难度&nbsp;/&nbsp;difficulty<br />
-                知识点&nbsp;/&nbsp;knowledge_point
+                解析&nbsp;/&nbsp;analysis
               </div>
             </div>
             {/* TXT */}

@@ -29,19 +29,16 @@ const typeLabels: Record<string, string> = {
 const WrongBook: React.FC = () => {
   const navigate = useNavigate()
   const [wrongRecords, setWrongRecords] = useState<(QuizRecord & { question: Question })[]>([])
-  const [kpStats, setKpStats] = useState<{ knowledge_point: string; total: number; correct: number; rate: number }[]>([])
   const [dueQuestions, setDueQuestions] = useState<Question[]>([])
-  const [selectedKp, setSelectedKp] = useState<string | undefined>(undefined)
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<(QuizRecord & { question: Question }) | null>(null)
 
   useEffect(() => {
     loadData()
-  }, [selectedKp])
+  }, [])
 
   const loadData = () => {
-    setWrongRecords(getWrongQuestionsWithQuestions(selectedKp))
-    setKpStats(getKnowledgePointStats())
+    setWrongRecords(getWrongQuestionsWithQuestions())
     const dueIds = getDueReviewQuestions()
     if (dueIds.length > 0) {
       setDueQuestions(getQuestionsByIds(dueIds))
@@ -65,9 +62,6 @@ const WrongBook: React.FC = () => {
     navigate('/quiz')
   }
 
-  const weakKps = kpStats.filter(kp => kp.rate < 80 && kp.total >= 2).sort((a, b) => a.rate - b.rate)
-  const allKps = kpStats.map(kp => kp.knowledge_point)
-
   const columns = [
     {
       title: '题目',
@@ -88,12 +82,6 @@ const WrongBook: React.FC = () => {
         }}>
           {typeLabels[record.question.type]}
         </Tag>
-      )
-    },
-    {
-      title: '知识点', width: 110,
-      render: (_: any, record: QuizRecord & { question: Question }) => (
-        <Text style={{ fontSize: 12, color: '#94a3b8' }}>{record.question.knowledge_point}</Text>
       )
     },
     {
@@ -138,7 +126,7 @@ const WrongBook: React.FC = () => {
             错题本 📝
           </Title>
           <Text style={{ color: '#64748b', marginTop: 4, display: 'block' }}>
-            回顾错题，强化薄弱知识点
+            回顾错题，强化薄弱点
           </Text>
         </div>
         <Space>
@@ -167,7 +155,7 @@ const WrongBook: React.FC = () => {
 
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 20 }}>
-        <Col span={8}>
+        <Col span={12}>
           <Card
             bordered={false}
             style={{
@@ -194,7 +182,7 @@ const WrongBook: React.FC = () => {
             </div>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={12}>
           <Card
             bordered={false}
             style={{
@@ -221,63 +209,9 @@ const WrongBook: React.FC = () => {
             </div>
           </Card>
         </Col>
-        <Col span={8}>
-          <Card
-            bordered={false}
-            style={{
-              borderRadius: 12,
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(30,30,46,0.9) 100%)',
-              border: '1px solid rgba(99,102,241,0.15)',
-            }}
-            bodyStyle={{ padding: '16px 20px' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: 10,
-                background: 'rgba(99,102,241,0.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#818cf8', fontSize: 18,
-              }}>
-                <BarChartOutlined />
-              </div>
-              <div>
-                <Text style={{ color: '#94a3b8', fontSize: 12, display: 'block' }}>薄弱知识点</Text>
-                <Text style={{ color: '#818cf8', fontSize: 24, fontWeight: 700 }}>{weakKps.length}</Text>
-                <Text style={{ color: '#64748b', fontSize: 12 }}> 个</Text>
-              </div>
-            </div>
-          </Card>
-        </Col>
       </Row>
 
-      {/* 薄弱点分析图 */}
-      {weakKps.length > 0 && (
-        <Card
-          title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>⚠️ 薄弱知识点分析</span>}
-          bordered={false}
-          style={{ borderRadius: 14, marginBottom: 20 }}
-        >
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={weakKps.slice(0, 8)} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="knowledge_point" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-              <RTooltip
-                contentStyle={{
-                  background: '#252535', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8, fontSize: 12,
-                }}
-                formatter={(value: any) => [`${value}%`, '正确率']}
-              />
-              <Bar dataKey="rate" radius={[6, 6, 0, 0]}>
-                {weakKps.slice(0, 8).map((entry, index) => (
-                  <Cell key={index} fill={entry.rate < 40 ? '#ef4444' : entry.rate < 60 ? '#f59e0b' : '#f97316'} opacity={0.85} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
+      {/* 薄弱点分析图已移除 */}
 
       {/* 知识点筛选 + 错题列表 */}
       <Card
@@ -286,18 +220,6 @@ const WrongBook: React.FC = () => {
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ color: '#e2e8f0', fontWeight: 600 }}>错题列表</span>
-            <Select
-              value={selectedKp}
-              onChange={setSelectedKp}
-              allowClear
-              placeholder="按知识点筛选"
-              style={{ width: 180, fontWeight: 400 }}
-              size="small"
-            >
-              {allKps.map(kp => (
-                <Option key={kp} value={kp}>{kp}</Option>
-              ))}
-            </Select>
           </div>
         }
       >
