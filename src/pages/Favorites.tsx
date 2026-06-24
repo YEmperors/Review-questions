@@ -241,7 +241,9 @@ const Favorites: React.FC = () => {
             columns={columns}
             dataSource={questions}
             pagination={{
-              pageSize: 15,
+              defaultPageSize: 15,
+              showSizeChanger: true,
+              pageSizeOptions: ['15', '30', '50', '100'],
               showTotal: total => `共 ${total} 题`,
               style: { padding: '12px 20px 0' }
             }}

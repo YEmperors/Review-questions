@@ -229,7 +229,9 @@ const WrongBook: React.FC = () => {
             columns={columns}
             dataSource={wrongRecords}
             pagination={{
-              pageSize: 15,
+              defaultPageSize: 15,
+              showSizeChanger: true,
+              pageSizeOptions: ['15', '30', '50', '100'],
               showTotal: total => `共 ${total} 题`,
               style: { marginTop: 12 }
             }}
