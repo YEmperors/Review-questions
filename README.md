@@ -6,7 +6,11 @@
 ![Vite](https://img.shields.io/badge/Vite-6.x-purple?logo=vite)
 ![SQLite](https://img.shields.io/badge/SQLite-Local-blue)
 
+[![Download](https://img.shields.io/badge/Download-Latest_Release-success?style=for-the-badge&logo=github)](https://github.com/YEmperors/Review-questions/releases)
+
 **Smart Quiz App** 是一款专为高效学习和备考打造的跨平台桌面应用。它支持海量题库管理、多格式题目一键导入、AI 智能出题、错题本以及可视化数据统计。基于本地 SQLite 数据库构建，保证您的数据隐私与绝对安全，完全离线可用（AI 联想除外）！
+
+🎉 **立即下载体验：** 请前往 [Releases 页面](https://github.com/YEmperors/Review-questions/releases) 获取最新版 Windows 安装包（`.exe`）。
 
 ---
 
