@@ -79,7 +79,51 @@ const CREATE_TABLES_SQL = `
   CREATE INDEX IF NOT EXISTS idx_quiz_records_question ON quiz_records(question_id);
   CREATE INDEX IF NOT EXISTS idx_quiz_records_created ON quiz_records(created_at);
   CREATE INDEX IF NOT EXISTS idx_favorites_question ON favorites(question_id);
+  CREATE INDEX IF NOT EXISTS idx_favorites_question ON favorites(question_id);
 `
+
+// ==================== 网页端 IndexedDB Fallback ====================
+const DB_STORE_NAME = 'smart-quiz-db'
+const DB_KEY = 'sqlite-data'
+
+async function getWebDbData(): Promise<Uint8Array | null> {
+  return new Promise((resolve) => {
+    const request = indexedDB.open(DB_STORE_NAME, 1)
+    request.onupgradeneeded = (e: any) => {
+      e.target.result.createObjectStore('store')
+    }
+    request.onsuccess = (e: any) => {
+      const db = e.target.result
+      if (!db.objectStoreNames.contains('store')) {
+        resolve(null)
+        return
+      }
+      const tx = db.transaction('store', 'readonly')
+      const store = tx.objectStore('store')
+      const getReq = store.get(DB_KEY)
+      getReq.onsuccess = () => resolve(getReq.result || null)
+      getReq.onerror = () => resolve(null)
+    }
+    request.onerror = () => resolve(null)
+  })
+}
+
+async function saveWebDbData(data: Uint8Array): Promise<boolean> {
+  return new Promise((resolve) => {
+    const request = indexedDB.open(DB_STORE_NAME, 1)
+    request.onsuccess = (e: any) => {
+      const db = e.target.result
+      const tx = db.transaction('store', 'readwrite')
+      const store = tx.objectStore('store')
+      const putReq = store.put(data, DB_KEY)
+      putReq.onsuccess = () => resolve(true)
+      putReq.onerror = () => resolve(false)
+    }
+    request.onerror = () => resolve(false)
+  })
+}
+// ==================================================================
+
 
 class DatabaseManager {
   private db: Database | null = null
@@ -102,6 +146,9 @@ class DatabaseManager {
           buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
         )
       }
+    } else {
+      // 纯网页端 Fallback
+      savedData = await getWebDbData()
     }
 
     if (savedData) {
@@ -137,8 +184,12 @@ class DatabaseManager {
         const result = await electronAPI.dbWrite(Buffer.from(data))
         this.pendingSave = false
         return result === true
+      } else {
+        // 纯网页端 Fallback
+        const result = await saveWebDbData(data)
+        this.pendingSave = false
+        return result
       }
-      return false
     } catch (err) {
       console.error('Failed to save database:', err)
       return false
@@ -155,6 +206,8 @@ class DatabaseManager {
       const electronAPI = (window as any).electronAPI
       if (electronAPI && electronAPI.dbWriteSync) {
         electronAPI.dbWriteSync(data.buffer)
+      } else {
+        saveWebDbData(data)
       }
     } catch (err) {
       console.error('Failed to save database (sync):', err)
