@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import {
   Card, Table, Button, Modal, Form, Input, Select, Tag, Space,
-  Upload, message, Popconfirm, Row, Col, Typography, Radio
+  Upload, message, Popconfirm, Row, Col, Typography, Radio, Dropdown
 } from 'antd'
+import type { MenuProps } from 'antd'
 import {
   PlusOutlined, UploadOutlined, DeleteOutlined, EditOutlined,
   DatabaseOutlined, DownloadOutlined, StarOutlined, StarFilled
@@ -11,7 +12,7 @@ import * as XLSX from 'xlsx'
 import {
   getQuestionBanks, getQuestions, createQuestion, createQuestionsBatch,
   updateQuestion, deleteQuestion, deleteQuestionsBatch, createQuestionBank, deleteQuestionBank,
-  getAllQuestionCounts, getKnowledgePoints, toggleFavorite, getFavorites
+  deleteAllQuestionBanks, getAllQuestionCounts, getKnowledgePoints, toggleFavorite, getFavorites
 } from '../db/repositories'
 import { Question, QuestionBank, QuestionType, Difficulty } from '../types'
 
@@ -45,6 +46,7 @@ const QuestionBankPage: React.FC = () => {
   const [filterKp, setFilterKp] = useState<string | undefined>(undefined)
   const [favSet, setFavSet] = useState<Set<number>>(new Set())
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [importBankId, setImportBankId] = useState<number>(1)
 
   const refreshFavorites = () => {
     setFavSet(new Set(getFavorites()))
@@ -94,9 +96,22 @@ const QuestionBankPage: React.FC = () => {
       deleteQuestionBank(id)
       if (selectedBank === id) setSelectedBank(undefined)
       loadBanks()
+      loadQuestions()
       message.success('题库已删除')
     } catch (err) {
       message.error('删除题库失败')
+    }
+  }
+
+  const handleDeleteAllBanks = () => {
+    try {
+      deleteAllQuestionBanks()
+      setSelectedBank(undefined)
+      loadBanks()
+      loadQuestions()
+      message.success('已清空全部题库')
+    } catch (err) {
+      message.error('清空失败')
     }
   }
 
@@ -188,60 +203,234 @@ const QuestionBankPage: React.FC = () => {
     })
   }
 
+  // ==================== TXT 解析器 ====================
+  /**
+   * 解析 txt 格式的题目文本
+   * 支持格式：
+   *   1.题目内容（支持多行）
+   *   A.选项一  B.选项二  C.选项三  D.选项四
+   *   答案：A（或 答案: ABC 多选）
+   *   解析：可选
+   */
+  const parseTxtQuestions = (text: string): any[] => {
+    const results: any[] = []
+    // 统一换行符
+    const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    const lines = normalized.split('\n')
+
+    // 按题号切割题块：行首为 数字 + .、．。）) 开头
+    const blocks: string[][] = []
+    let cur: string[] = []
+    for (const line of lines) {
+      if (/^\d+[.、．。）)】]\s*\S/.test(line.trim()) && cur.length > 0) {
+        blocks.push(cur)
+        cur = [line]
+      } else {
+        cur.push(line)
+      }
+    }
+    if (cur.length > 0) blocks.push(cur)
+
+    for (const block of blocks) {
+      const bLines = block.map(l => l.trim()).filter(Boolean)
+      if (bLines.length === 0) continue
+
+      // 第一行 = 题目内容（去掉题号前缀）
+      const rawContent = bLines[0].replace(/^\d+[.、．。）)】]\s*/, '').trim()
+      if (!rawContent) continue
+
+      let explicitType: QuestionType | null = null
+      
+      // 检查标题中是否显式声明了题型，如 【多选题】或 (填空题)
+      const typeMatch = rawContent.match(/[【\[(（](单选|单选题|多选|多选题|判断|判断题|填空|填空题|问答|问答题|简答|简答题)[】\])）]/)
+      if (typeMatch) {
+        const tStr = typeMatch[1]
+        if (tStr.includes('单选')) explicitType = QuestionType.SINGLE
+        else if (tStr.includes('多选')) explicitType = QuestionType.MULTIPLE
+        else if (tStr.includes('判断')) explicitType = QuestionType.JUDGE
+        else if (tStr.includes('填空')) explicitType = QuestionType.FILL
+        else if (tStr.includes('问答') || tStr.includes('简答')) explicitType = QuestionType.SHORT_ANSWER
+      }
+
+      const options: string[] = []
+      let answer = ''
+      let analysis = ''
+      let knowledgePoint = ''
+      let difficulty = 2
+      const contentLines = [rawContent]
+
+      for (let i = 1; i < bLines.length; i++) {
+        const line = bLines[i]
+
+        // 选项行：A. A、 A: (A) 等
+        const optMatch = line.match(/^([A-Za-z])[.、：:\s)）]\s*(.+)/)
+        if (optMatch) {
+          options.push(optMatch[2].trim())
+          continue
+        }
+
+        // 答案行
+        const ansMatch = line.match(/^(?:答案|正确答案|参考答案)[：:]\s*(.+)/)
+        if (ansMatch) { answer = ansMatch[1].trim(); continue }
+
+        // 解析行
+        const anaMatch = line.match(/^(?:解析|解题思路|分析|答案解析|详解)[：:]\s*(.+)/)
+        if (anaMatch) { analysis = anaMatch[1].trim(); continue }
+
+        // 知识点行
+        const kpMatch = line.match(/^(?:知识点|考点)[：:]\s*(.+)/)
+        if (kpMatch) { knowledgePoint = kpMatch[1].trim(); continue }
+
+        // 难度行
+        const diffMatch = line.match(/^(?:难度)[：:]\s*(.+)/)
+        if (diffMatch) {
+          const d = diffMatch[1].trim()
+          difficulty = d === '简单' || d === '1' ? 1 : d === '困难' || d === '3' ? 3 : 2
+          continue
+        }
+
+        // 题型行（显式指定）
+        const tMatch = line.match(/^(?:题型)[：:]\s*(.+)/)
+        if (tMatch) {
+          const tStr = tMatch[1].trim()
+          if (tStr.includes('单选')) explicitType = QuestionType.SINGLE
+          else if (tStr.includes('多选')) explicitType = QuestionType.MULTIPLE
+          else if (tStr.includes('判断')) explicitType = QuestionType.JUDGE
+          else if (tStr.includes('填空')) explicitType = QuestionType.FILL
+          else if (tStr.includes('问答') || tStr.includes('简答')) explicitType = QuestionType.SHORT_ANSWER
+          continue
+        }
+
+        // 无选项且还未遇到答案 → 续行（多行题目）
+        if (options.length === 0 && !answer) {
+          contentLines.push(line)
+        }
+      }
+
+      const content = contentLines.join('\n')
+
+      // 自动推断题型
+      let type: QuestionType = QuestionType.SINGLE
+      if (explicitType) {
+        type = explicitType
+      } else if (options.length > 0) {
+        // 答案含多个字母 → 多选
+        const cleanAns = answer.replace(/[,，\s]/g, '')
+        type = cleanAns.length > 1 && /^[A-Za-z]+$/.test(cleanAns)
+          ? QuestionType.MULTIPLE
+          : QuestionType.SINGLE
+      } else {
+        const lowerAns = answer.toLowerCase()
+        if (['对', '错', '正确', '错误', 'true', 'false', '是', '否', '✓', '✗'].includes(lowerAns)) {
+          type = QuestionType.JUDGE
+        } else if (content.includes('___') || content.includes('____') || content.includes('（　）') || content.includes('( )') || content.includes('()') || content.includes('__')) {
+          type = QuestionType.FILL
+        } else {
+          // 无选项，且不符合判断、填空特征，默认归为简答/问答题
+          type = QuestionType.SHORT_ANSWER
+        }
+      }
+
+      results.push({
+        type,
+        content,
+        options: options.length > 0 ? JSON.stringify(options) : null,
+        answer,
+        analysis: analysis || null,
+        difficulty,
+        knowledge_point: knowledgePoint,
+        tags: null,
+        bank_id: importBankId
+      })
+    }
+    return results
+  }
+
   // ==================== 文件导入 ====================
   const handleImport = (file: File) => {
+    const isTxt = file.name.endsWith('.txt')
     const reader = new FileReader()
+
     reader.onload = (e) => {
       try {
         const data = e.target?.result
-        let jsonData: any[]
+        let questionsToInsert: any[]
 
-        if (file.name.endsWith('.json')) {
-          jsonData = JSON.parse(data as string)
-        } else if (file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-          const workbook = XLSX.read(data, { type: 'array' })
-          const sheet = workbook.Sheets[workbook.SheetNames[0]]
-          jsonData = XLSX.utils.sheet_to_json(sheet)
+        if (isTxt) {
+          // TXT 专用解析器
+          questionsToInsert = parseTxtQuestions(data as string)
         } else {
-          message.error('不支持的文件格式')
-          return
+          let jsonData: any[]
+          if (file.name.endsWith('.json')) {
+            jsonData = JSON.parse(data as string)
+          } else if (file.name.endsWith('.csv')) {
+            const workbook = XLSX.read(data, { type: 'string' })
+            const sheet = workbook.Sheets[workbook.SheetNames[0]]
+            jsonData = XLSX.utils.sheet_to_json(sheet)
+          } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            const workbook = XLSX.read(data, { type: 'array' })
+            const sheet = workbook.Sheets[workbook.SheetNames[0]]
+            jsonData = XLSX.utils.sheet_to_json(sheet)
+          } else {
+            message.error('不支持的文件格式')
+            return
+          }
+          // 映射表格数据
+          questionsToInsert = jsonData.map((row: any) => {
+            const rawOptions = row.options || row.选项
+            let parsedOptions: string[] = []
+            if (Array.isArray(rawOptions)) {
+              parsedOptions = rawOptions
+            } else if (typeof rawOptions === 'string') {
+              parsedOptions = rawOptions.split(/[\n|]/).map((s: string) => s.trim()).filter(Boolean)
+              parsedOptions = parsedOptions.map(opt => opt.replace(/^[A-Z][.、:]\s*/i, ''))
+            }
+
+            const content = row.content || row.题目 || ''
+            const answer = String(row.answer || row.答案 || '')
+            const typeStr = row.type || row.题型 || ''
+
+            // 智能推断题型（如果表格没写“题型”列）
+            let inferredType = QuestionType.SINGLE
+            if (typeStr) {
+              inferredType = mapImportType(typeStr)
+            } else if (parsedOptions.length > 0) {
+              // 有选项，如果答案包含多个字母则为多选
+              const cleanAns = answer.replace(/[,，\s]/g, '')
+              inferredType = cleanAns.length > 1 && /^[A-Za-z]+$/.test(cleanAns)
+                ? QuestionType.MULTIPLE
+                : QuestionType.SINGLE
+            } else {
+              const lowerAns = answer.toLowerCase()
+              if (['对', '错', '正确', '错误', 'true', 'false', '是', '否', '✓', '✗'].includes(lowerAns)) {
+                inferredType = QuestionType.JUDGE
+              } else if (content.includes('___') || content.includes('____') || content.includes('（　）') || content.includes('( )') || content.includes('()') || content.includes('__')) {
+                inferredType = QuestionType.FILL
+              } else {
+                inferredType = QuestionType.SHORT_ANSWER
+              }
+            }
+
+            return {
+              type: inferredType,
+              content: content,
+              options: parsedOptions.length > 0 ? JSON.stringify(parsedOptions) : null,
+              answer: answer,
+              analysis: row.analysis || row.解析 || null,
+              difficulty: Number(row.difficulty || row.难度 || 2),
+              knowledge_point: row.knowledge_point || row.知识点 || '',
+              tags: null,
+              bank_id: importBankId
+            }
+          }).filter((q: any) => q.content)
         }
-
-        // 映射导入数据
-        const questionsToInsert = jsonData.map((row: any) => {
-          const rawOptions = row.options || row.选项
-          let parsedOptions: string[] = []
-
-          if (Array.isArray(rawOptions)) {
-            parsedOptions = rawOptions
-          } else if (typeof rawOptions === 'string') {
-            // 支持换行符 \n 或竖线 | 分割
-            parsedOptions = rawOptions.split(/[\n|]/).map(s => s.trim()).filter(Boolean)
-            // 自动移除用户在 Excel 中手打的 A. B. C. 等标号前缀，避免与系统自带前缀重复
-            parsedOptions = parsedOptions.map(opt => opt.replace(/^[A-Z][.、:]\s*/i, ''))
-          }
-
-          const options = parsedOptions.length > 0 ? JSON.stringify(parsedOptions) : null
-
-          return {
-            type: mapImportType(row.type || row.题型 || 'single'),
-            content: row.content || row.题目 || '',
-            options,
-            answer: String(row.answer || row.答案 || ''),
-            analysis: row.analysis || row.解析 || null,
-            difficulty: Number(row.difficulty || row.难度 || 2),
-            knowledge_point: row.knowledge_point || row.知识点 || '',
-            tags: null,
-            bank_id: selectedBank || 1
-          }
-        }).filter(q => q.content)
 
         if (questionsToInsert.length > 0) {
           createQuestionsBatch(questionsToInsert)
           message.success(`成功导入 ${questionsToInsert.length} 道题目`)
           loadQuestions()
         } else {
-          message.warning('未找到有效题目数据')
+          message.warning('未找到有效题目数据，请检查文件格式')
         }
       } catch (err) {
         console.error(err)
@@ -250,11 +439,18 @@ const QuestionBankPage: React.FC = () => {
         setImportModalVisible(false)
       }
     }
+
     reader.onerror = () => {
       message.error('文件读取失败')
       setImportModalVisible(false)
     }
-    reader.readAsArrayBuffer(file)
+
+    const isTextFormat = file.name.endsWith('.txt') || file.name.endsWith('.csv') || file.name.endsWith('.json')
+    if (isTextFormat) {
+      reader.readAsText(file, 'utf-8')
+    } else {
+      reader.readAsArrayBuffer(file)
+    }
     return false
   }
 
@@ -271,21 +467,88 @@ const QuestionBankPage: React.FC = () => {
   }
 
   // ==================== 导出模板 ====================
-  const handleExportTemplate = () => {
+  const tableTemplateData = [
+    { 题型: '单选题', 题目: '1+1等于几？', 选项: 'A.1\nB.2\nC.3\nD.4', 答案: 'B', 解析: '1+1=2', 难度: 1, 知识点: '基础数学' },
+    { 题型: '多选题', 题目: '以下哪些是水果？', 选项: 'A.苹果\nB.西红柿\nC.香蕉\nD.黄瓜', 答案: 'A|C', 解析: '苹果和香蕉是水果', 难度: 1, 知识点: '常识' },
+    { 题型: '判断题', 题目: '地球是圆的', 选项: '', 答案: '对', 解析: '地球是近似球体', 难度: 1, 知识点: '地理' },
+    { 题型: '填空题', 题目: '中国的首都是___。', 选项: '', 答案: '北京', 解析: '', 难度: 1, 知识点: '地理' },
+    { 题型: '简答题', 题目: '请简述光合作用的过程。', 选项: '', 答案: '植物利用光能将二氧化碳和水转化为有机物，并释放氧气。', 解析: '', 难度: 2, 知识点: '生物' },
+  ]
+
+  const handleExportExcel = () => {
     try {
-      const template = [
-        { 题型: 'single', 题目: '1+1等于几？', 选项: 'A.1\nB.2\nC.3\nD.4', 答案: 'B', 解析: '1+1=2', 难度: 1, 知识点: '基础数学' },
-        { 题型: 'judge', 题目: '地球是圆的', 选项: '对\n错', 答案: '对', 解析: '地球是近似球体', 难度: 1, 知识点: '地理' },
-      ]
-      const ws = XLSX.utils.json_to_sheet(template)
+      const ws = XLSX.utils.json_to_sheet(tableTemplateData)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, '题目模板')
-      XLSX.writeFile(wb, '刷题导入模板.xlsx')
-      message.success('模板已下载')
+      XLSX.writeFile(wb, '导入模板_Excel.xlsx')
+      message.success('Excel 模板已下载')
     } catch (err) {
-      message.error('导出模板失败')
+      message.error('导出失败')
     }
   }
+
+  const handleExportCsv = () => {
+    try {
+      const ws = XLSX.utils.json_to_sheet(tableTemplateData)
+      const csv = XLSX.utils.sheet_to_csv(ws)
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = '导入模板_CSV.csv'
+      link.click()
+      message.success('CSV 模板已下载')
+    } catch (err) {
+      message.error('导出失败')
+    }
+  }
+
+  const handleExportTxt = () => {
+    try {
+      const txtContent = `1. 【单选题】1+1等于几？
+A. 1
+B. 2
+C. 3
+D. 4
+答案：B
+解析：基础数学运算。
+难度：简单
+知识点：数学
+
+2. 以下哪些是水果？
+题型：多选题
+A. 苹果
+B. 西红柿
+C. 香蕉
+D. 黄瓜
+答案：AC
+解析：西红柿是蔬菜，不是水果。
+
+3. 地球是圆的（判断题）
+答案：对
+
+4. 中国的首都是___。
+答案：北京
+知识点：地理
+
+5. 请简述光合作用的过程。
+题型：简答题
+答案：植物利用光能将二氧化碳和水转化为有机物，并释放氧气。`
+      const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = '导入模板_TXT.txt'
+      link.click()
+      message.success('TXT 模板已下载')
+    } catch (err) {
+      message.error('导出失败')
+    }
+  }
+
+  const exportMenuItems: MenuProps['items'] = [
+    { key: 'excel', label: 'Excel 模板 (.xlsx)', onClick: handleExportExcel },
+    { key: 'csv', label: 'CSV 模板 (.csv)', onClick: handleExportCsv },
+    { key: 'txt', label: 'TXT 模板 (.txt)', onClick: handleExportTxt },
+  ]
 
   // ==================== 当前题目类型 ====================
   const currentType = Form.useWatch('type', form)
@@ -324,15 +587,37 @@ const QuestionBankPage: React.FC = () => {
         <Col span={16}>
           <Card size="small" title="题库分类">
             <Space wrap>
-              <Tag
-                color={!selectedBank ? 'blue' : 'default'}
-                style={{ cursor: 'pointer', padding: '4px 12px' }}
-                onClick={() => setSelectedBank(undefined)}
-              >
-                全部 ({bankCounts[0] ?? 0})
-              </Tag>
+              <span className="bank-tag-item">
+                <Tag
+                  color={!selectedBank ? 'blue' : 'default'}
+                  style={{ cursor: 'pointer', padding: '4px 12px' }}
+                  onClick={() => setSelectedBank(undefined)}
+                >
+                  全部 ({bankCounts[0] ?? 0})
+                </Tag>
+                <span className="bank-tag-action">
+                  <Popconfirm
+                    title="清空全部题库？"
+                    description={`将删除全部 ${banks.length} 个题库及所有 ${bankCounts[0] ?? 0} 道题目，此操作不可恢复！`}
+                    okText="确认清空"
+                    okButtonProps={{ danger: true }}
+                    cancelText="取消"
+                    onConfirm={handleDeleteAllBanks}
+                    disabled={(bankCounts[0] ?? 0) === 0 && banks.length === 0}
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      disabled={(bankCounts[0] ?? 0) === 0 && banks.length === 0}
+                      title="清空全部题库"
+                    />
+                  </Popconfirm>
+                </span>
+              </span>
               {banks.map(bank => (
-                <span key={bank.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span key={bank.id} className="bank-tag-item">
                   <Tag
                     color={selectedBank === bank.id ? 'blue' : 'default'}
                     style={{ cursor: 'pointer', padding: '4px 12px' }}
@@ -340,9 +625,18 @@ const QuestionBankPage: React.FC = () => {
                   >
                     {bank.name} ({bankCounts[bank.id] ?? 0})
                   </Tag>
-                  <Popconfirm title={`删除题库"${bank.name}"？`} onConfirm={() => handleDeleteBank(bank.id)}>
-                    <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                  </Popconfirm>
+                  <span className="bank-tag-action">
+                    <Popconfirm
+                      title={`删除题库「${bank.name}」？`}
+                      description={`该题库内所有题目（含子题库题目）将一并删除，此操作不可恢复。`}
+                      okText="确认删除"
+                      okButtonProps={{ danger: true }}
+                      cancelText="取消"
+                      onConfirm={() => handleDeleteBank(bank.id)}
+                    >
+                      <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  </span>
                 </span>
               ))}
               <Button type="dashed" size="small" icon={<PlusOutlined />}
@@ -355,8 +649,13 @@ const QuestionBankPage: React.FC = () => {
         <Col span={8}>
           <Card size="small" title="导入导出">
             <Space>
-              <Button icon={<UploadOutlined />} onClick={() => setImportModalVisible(true)}>导入题目</Button>
-              <Button icon={<DownloadOutlined />} onClick={handleExportTemplate}>下载模板</Button>
+              <Button icon={<UploadOutlined />} onClick={() => {
+                setImportBankId(selectedBank ?? (banks[0]?.id ?? 1))
+                setImportModalVisible(true)
+              }}>导入题目</Button>
+              <Dropdown menu={{ items: exportMenuItems }}>
+                <Button icon={<DownloadOutlined />}>下载模板</Button>
+              </Dropdown>
             </Space>
           </Card>
         </Col>
@@ -518,27 +817,83 @@ const QuestionBankPage: React.FC = () => {
         open={importModalVisible}
         onCancel={() => setImportModalVisible(false)}
         footer={null}
+        width={680}
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Text>支持以下格式：</Text>
-          <ul>
-            <li><b>Excel (.xlsx / .xls)</b></li>
-            <li><b>CSV (.csv)</b></li>
-            <li><b>JSON (.json)</b></li>
-          </ul>
-          <Text>字段映射：题型、题目(content)、选项(options)、答案(answer)、解析(analysis)、难度(difficulty)、知识点(knowledge_point)</Text>
-          <Upload.Dragger
-            accept=".xlsx,.xls,.csv,.json"
-            beforeUpload={handleImport}
-            showUploadList={false}
-          >
-            <p className="ant-upload-drag-icon"><DatabaseOutlined /></p>
-            <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-          </Upload.Dragger>
-          <Button type="link" onClick={handleExportTemplate}>
-            <DownloadOutlined /> 下载导入模板
-          </Button>
-        </Space>
+        {/* 题库选择 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <Text style={{ whiteSpace: 'nowrap', fontSize: 13 }}>导入至题库：</Text>
+          <Select value={importBankId} onChange={setImportBankId} style={{ flex: 1 }} placeholder="请选择题库" size="small">
+            {banks.map(b => <Option key={b.id} value={b.id}>{b.name}</Option>)}
+          </Select>
+        </div>
+
+        {/* 左右两列 */}
+        <Row gutter={12}>
+          {/* 左：格式说明 */}
+          <Col span={13}>
+            <div style={{ fontSize: 12, color: '#555', marginBottom: 4, fontWeight: 500 }}>支持格式</div>
+            {/* Excel / CSV / JSON */}
+            <div style={{ background: '#fafafa', border: '1px solid #e8e8e8', borderLeft: '3px solid #1677ff', borderRadius: 6, padding: '8px 10px', marginBottom: 8, fontSize: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#1677ff', marginBottom: 4 }}>📊 Excel / CSV / JSON</div>
+              <div style={{ color: '#555', lineHeight: 1.6 }}>
+                列名（中英均可）：<br />
+                题型&nbsp;/&nbsp;type &nbsp;·&nbsp; 题目&nbsp;/&nbsp;content<br />
+                选项&nbsp;/&nbsp;options &nbsp;·&nbsp; 答案&nbsp;/&nbsp;answer<br />
+                解析&nbsp;/&nbsp;analysis &nbsp;·&nbsp; 难度&nbsp;/&nbsp;difficulty<br />
+                知识点&nbsp;/&nbsp;knowledge_point
+              </div>
+            </div>
+            {/* TXT */}
+            <div style={{ background: '#fafafa', border: '1px solid #e8e8e8', borderLeft: '3px solid #52c41a', borderRadius: 6, padding: '8px 10px', fontSize: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#389e0d', marginBottom: 4 }}>📄 TXT — 按编号分块</div>
+              <pre style={{
+                background: '#f0f0f0', borderRadius: 4, padding: '6px 8px',
+                fontSize: 11, margin: '0 0 4px', lineHeight: 1.6, color: '#333',
+                whiteSpace: 'pre-wrap', wordBreak: 'break-all'
+              }}>{`1.题目内容
+A.选项一  B.选项二
+C.选项三  D.选项四
+答案：A   解析：可省略
+
+2.判断题示例
+答案：对
+
+3.1+1=___
+答案：2`}</pre>
+              <div style={{ color: '#888', lineHeight: 1.5, marginTop: 4 }}>
+                支持在题目中显式声明：<b>1.【多选题】...</b> 或换行写 <b>题型：问答题</b><br />
+                未声明时自动推断：有选项→单/多选 &nbsp;·&nbsp; 答案对/错→判断 &nbsp;·&nbsp; 含___→填空 &nbsp;·&nbsp; 其它→问答
+              </div>
+            </div>
+          </Col>
+
+          {/* 右：上传区 */}
+          <Col span={11}>
+            <div style={{ fontSize: 12, color: '#555', marginBottom: 4, fontWeight: 500 }}>上传文件</div>
+            <Upload.Dragger
+              accept=".xlsx,.xls,.csv,.json,.txt"
+              beforeUpload={handleImport}
+              showUploadList={false}
+              style={{ borderRadius: 8 }}
+              height={160}
+            >
+              <div style={{ padding: '12px 0' }}>
+                <DatabaseOutlined style={{ fontSize: 24, color: '#1677ff', display: 'block', marginBottom: 6 }} />
+                <p style={{ fontSize: 13, fontWeight: 500, margin: '0 0 3px', color: '#333' }}>点击或拖拽文件上传</p>
+                <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>Excel · CSV · JSON · TXT</p>
+              </div>
+            </Upload.Dragger>
+            <Dropdown menu={{ items: exportMenuItems }} placement="bottomCenter">
+              <Button
+                type="link"
+                size="small"
+                style={{ marginTop: 8, padding: 0, fontSize: 12 }}
+              >
+                <DownloadOutlined /> 下载导入模板
+              </Button>
+            </Dropdown>
+          </Col>
+        </Row>
       </Modal>
     </div>
   )

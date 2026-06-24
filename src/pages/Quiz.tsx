@@ -397,7 +397,7 @@ const QuizPage: React.FC = () => {
                           borderRadius: 10,
                           border: `1px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
                           background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)',
-                          transition: 'all 0.2s',
+                          transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
                           cursor: 'pointer',
                           margin: 0,
                         }}
@@ -410,7 +410,7 @@ const QuizPage: React.FC = () => {
                             fontSize: 12, fontWeight: 600,
                             color: isSelected ? '#fff' : '#94a3b8',
                             flexShrink: 0,
-                            transition: 'all 0.2s',
+                            transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
                           }}>
                             {letter}
                           </span>
@@ -443,7 +443,7 @@ const QuizPage: React.FC = () => {
                           borderRadius: 10,
                           border: `1px solid ${isChecked ? '#8b5cf6' : 'rgba(255,255,255,0.08)'}`,
                           background: isChecked ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.02)',
-                          transition: 'all 0.2s',
+                          transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
                           margin: 0,
                         }}
                       >
@@ -455,7 +455,7 @@ const QuizPage: React.FC = () => {
                             fontSize: 12, fontWeight: 600,
                             color: isChecked ? '#fff' : '#94a3b8',
                             flexShrink: 0,
-                            transition: 'all 0.2s',
+                            transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
                           }}>
                             {letter}
                           </span>
@@ -472,7 +472,11 @@ const QuizPage: React.FC = () => {
               <Input
                 value={userAnswer}
                 onChange={e => setUserAnswer(e.target.value)}
-                onPressEnter={handleSubmit}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                    handleSubmit()
+                  }
+                }}
                 placeholder="请输入答案..."
                 size="large"
                 style={{

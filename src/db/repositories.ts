@@ -47,9 +47,50 @@ export function updateQuestionBank(id: number, name: string, parentId: number | 
   dbManager.markDirty()
 }
 
+/**
+ * 递归收集指定题库及其所有子孙题库的 ID
+ */
+function collectBankIds(rootId: number): number[] {
+  const ids: number[] = [rootId]
+  const children = selectAll<{ id: number }>('SELECT id FROM question_banks WHERE parent_id = ?', [rootId])
+  for (const child of children) {
+    ids.push(...collectBankIds(child.id))
+  }
+  return ids
+}
+
+/**
+ * 删除题库（含递归删除所有子题库及其题目）
+ */
 export function deleteQuestionBank(id: number): void {
   const db = dbManager.getDb()
-  db.run('DELETE FROM question_banks WHERE id = ?', [id])
+  // 收集该题库及所有子孙题库的 ID
+  const bankIds = collectBankIds(id)
+  // 批量删除所有相关题目（quiz_records / spaced_repetition / favorites 通过外键 CASCADE 自动清除）
+  if (bankIds.length > 0) {
+    const placeholders = bankIds.map(() => '?').join(',')
+    db.run(`DELETE FROM questions WHERE bank_id IN (${placeholders})`, bankIds)
+    // 从叶子到根依次删除，避免外键约束冲突
+    for (let i = bankIds.length - 1; i >= 0; i--) {
+      db.run('DELETE FROM question_banks WHERE id = ?', [bankIds[i]])
+    }
+  }
+  dbManager.markDirty()
+}
+
+/**
+ * 删除全部题库及所有题目，并重建默认题库
+ */
+export function deleteAllQuestionBanks(): void {
+  const db = dbManager.getDb()
+  // 删除全部题目（关联的 quiz_records / spaced_repetition / favorites 通过外键 CASCADE 自动清除）
+  db.run('DELETE FROM questions')
+  // 重置 questions 的自增序列，下次导入题目 id 从 1 开始（整洁一致）
+  db.run("DELETE FROM sqlite_sequence WHERE name='questions'")
+  // 删除全部题库
+  db.run('DELETE FROM question_banks')
+  // 重建默认题库，保证应用始终有可用题库
+  db.run("INSERT INTO question_banks (id, name, parent_id, description) VALUES (1, '默认题库', NULL, '默认的题库分类')")
   dbManager.markDirty()
 }
 
@@ -187,10 +228,11 @@ export function deleteQuestionsBatch(ids: number[]): void {
 export function getQuestionCount(bankId?: number): number {
   if (bankId !== undefined) {
     const row = selectOne<{ c: number }>('SELECT COUNT(*) as c FROM questions WHERE bank_id = ?', [bankId])
-    return row?.c ?? 0
+    // sql.js 返回的数值字段可能是字符串，需强制转换
+    return Number(row?.c ?? 0)
   }
   const row = selectOne<{ c: number }>('SELECT COUNT(*) as c FROM questions')
-  return row?.c ?? 0
+  return Number(row?.c ?? 0)
 }
 
 /** 获取所有题库的题目数量，一次查询 */
@@ -200,8 +242,12 @@ export function getAllQuestionCounts(): Record<number, number> {
   )
   const result: Record<number, number> = { 0: 0 } // 0 = 全部
   for (const r of rows) {
-    result[r.bank_id] = r.c
-    result[0] += r.c
+    // sql.js 返回的数值字段实际为字符串，必须用 Number() 转换
+    // 否则 += 会变成字符串拼接，导致计数显示错误（如 "53" 而非 8）
+    const bankId = Number(r.bank_id)
+    const count = Number(r.c)
+    result[bankId] = count
+    result[0] += count
   }
   return result
 }
@@ -332,12 +378,12 @@ export function getStats(): {
   }
 
   return {
-    totalQuestions: totalQ?.c ?? 0,
-    answeredQuestions: answeredQ?.c ?? 0,
-    correctCount: correctR?.c ?? 0,
-    totalRecords: totalR?.c ?? 0,
-    todayCount: todayR?.c ?? 0,
-    todayCorrect: todayC?.c ?? 0,
+    totalQuestions: Number(totalQ?.c ?? 0),
+    answeredQuestions: Number(answeredQ?.c ?? 0),
+    correctCount: Number(correctR?.c ?? 0),
+    totalRecords: Number(totalR?.c ?? 0),
+    todayCount: Number(todayR?.c ?? 0),
+    todayCorrect: Number(todayC?.c ?? 0),
     streakDays,
     pendingCount: pendingR?.c ?? 0
   }

@@ -35,12 +35,9 @@ const StatCard: React.FC<{
     bordered={false}
     style={{
       background: `linear-gradient(135deg, ${bgColor} 0%, rgba(30,30,46,0.8) 100%)`,
-      border: `1px solid ${color}20`,
-      borderRadius: 14,
-      overflow: 'hidden',
-      position: 'relative',
     }}
     bodyStyle={{ padding: '20px 24px' }}
+    className="stat-card"
   >
     <div style={{
       position: 'absolute', top: 0, right: 0, width: 80, height: 80,
@@ -56,7 +53,7 @@ const StatCard: React.FC<{
         </div>
         {trend && <Text style={{ color, fontSize: 12, marginTop: 4, display: 'block' }}>{trend}</Text>}
       </div>
-      <div style={{
+      <div className="stat-icon" style={{
         width: 44, height: 44, borderRadius: 12,
         background: `${color}20`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -156,7 +153,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="animate-float-up">
       {/* Header */}
       <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
@@ -172,13 +169,14 @@ const Dashboard: React.FC = () => {
           size="large"
           icon={<RocketOutlined />}
           onClick={() => navigate('/quiz-setup')}
+          className="gradient-btn"
           style={{
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            backgroundImage: 'linear-gradient(to right, #6366f1 0%, #8b5cf6 51%, #6366f1 100%)',
             border: 'none',
             borderRadius: 10,
             height: 44,
             fontWeight: 600,
-            boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+            boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
           }}
         >
           开始刷题
@@ -186,15 +184,15 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* 今日目标 */}
+      <div className="animate-delay-1 animate-float-up" style={{ animationFillMode: 'both' }}>
       <Card
         bordered={false}
+        className="glass-card"
         style={{
           marginBottom: 24,
           background: goalAchieved
-            ? 'linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(30,30,46,0.95) 100%)'
-            : 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(30,30,46,0.95) 100%)',
-          border: `1px solid ${goalAchieved ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.2)'}`,
-          borderRadius: 14,
+            ? 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(30,30,46,0.7) 100%)'
+            : 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(30,30,46,0.7) 100%)',
         }}
         bodyStyle={{ padding: '20px 24px' }}
       >
@@ -227,8 +225,10 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </Card>
+      </div>
 
       {/* 统计卡片 */}
+      <div className="animate-delay-2 animate-float-up" style={{ animationFillMode: 'both' }}>
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <StatCard
@@ -273,14 +273,17 @@ const Dashboard: React.FC = () => {
           />
         </Col>
       </Row>
+      </div>
 
+      <div className="animate-delay-3 animate-float-up" style={{ animationFillMode: 'both' }}>
       <Row gutter={16} style={{ marginBottom: 24 }}>
         {/* 答题趋势图 */}
         <Col span={15}>
           <Card
             title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>📈 近14天答题趋势</span>}
             bordered={false}
-            style={{ borderRadius: 14, height: '100%' }}
+            className="glass-card"
+            style={{ height: '100%' }}
             bodyStyle={{ paddingTop: 8 }}
           >
             {dailyData.length > 0 ? (
@@ -316,7 +319,8 @@ const Dashboard: React.FC = () => {
           <Card
             title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>🎯 知识点掌握度</span>}
             bordered={false}
-            style={{ borderRadius: 14, height: '100%' }}
+            className="glass-card"
+            style={{ height: '100%' }}
             bodyStyle={{ paddingTop: 8 }}
           >
             {kpData.length > 0 ? (
@@ -342,7 +346,7 @@ const Dashboard: React.FC = () => {
             <Card
               title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>🔄 待复习题目</span>}
               bordered={false}
-              style={{ borderRadius: 14 }}
+              className="glass-card"
               extra={
                 <Button
                   type="link"
@@ -397,7 +401,7 @@ const Dashboard: React.FC = () => {
             <Card
               title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>⚠️ 薄弱知识点</span>}
               bordered={false}
-              style={{ borderRadius: 14 }}
+              className="glass-card"
               extra={
                 <Button
                   type="link"
@@ -482,6 +486,7 @@ const Dashboard: React.FC = () => {
           </Col>
         )}
       </Row>
+      </div>
     </div>
   )
 }

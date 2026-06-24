@@ -1,0 +1,82 @@
+/* src/index.css */
+@keyframes floatUp {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-float-up {
+  animation: floatUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-delay-1 { animation-delay: 0.1s; }
+.animate-delay-2 { animation-delay: 0.2s; }
+.animate-delay-3 { animation-delay: 0.3s; }
+
+.stat-card {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 16px !important;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2) !important;
+}
+
+.stat-icon {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* 玻璃拟态风格卡片 */
+.glass-card {
+  background: rgba(30, 30, 46, 0.6) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.15s ease;
+  border-radius: 16px !important;
+}
+
+.glass-card:hover {
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 按钮渐变动画 */
+.gradient-btn {
+  background-size: 200% auto !important;
+  transition: 0.15s !important;
+}
+.gradient-btn:hover {
+  background-position: right center !important;
+  box-shadow: 0 4px 20px rgba(99,102,241,0.6) !important;
+}
+.gradient-btn:active {
+  transform: scale(0.97);
+}
+/* 题库分类标签：删除按钮仅在 hover 时显示，且不占空隙 */
+.bank-tag-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.bank-tag-item .bank-tag-action {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  margin-left: 0;
+  pointer-events: none;
+  transition: max-width 0.2s ease, opacity 0.2s ease, margin-left 0.2s ease;
+}
+
+.bank-tag-item:hover .bank-tag-action {
+  max-width: 28px;
+  opacity: 1;
+  margin-left: 2px;
+  pointer-events: auto;
+}

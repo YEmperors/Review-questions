@@ -12,11 +12,18 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: '智能刷题',
+    show: false, // 优化启动：等渲染完成后再显示，避免白屏闪烁
+    backgroundColor: '#1e1e2e', // 设置为深色背景以匹配主题色
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     }
+  })
+
+  // 优化启动：内容准备就绪后再显示窗口
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show()
   })
 
   // 开发环境加载 vite dev server

@@ -110,6 +110,7 @@ class DatabaseManager {
       this.db = new SQL.Database()
     }
 
+    this.db.run('PRAGMA foreign_keys = ON;')
     this.db.run(CREATE_TABLES_SQL)
     this.scheduleSave()
   }
