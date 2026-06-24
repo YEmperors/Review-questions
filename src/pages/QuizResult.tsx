@@ -27,6 +27,25 @@ const modeLabels: Record<string, string> = {
   practice: '自由练习', exam: '模拟考试', review: '复习模式', smart: '智能推荐'
 }
 
+function getOptions(question: Question): string[] {
+  if (question.type === 'judge') {
+    if (!question.options || question.options === '[]') return ['对', '错']
+    try {
+      const parsed = JSON.parse(question.options)
+      return parsed.length > 0 ? parsed : ['对', '错']
+    } catch {
+      return ['对', '错']
+    }
+  }
+
+  if (!question.options) return []
+  try {
+    return JSON.parse(question.options)
+  } catch {
+    return []
+  }
+}
+
 const QuizResultPage: React.FC = () => {
   const navigate = useNavigate()
   const [results, setResults] = useState<QuizResult[]>([])
@@ -448,9 +467,9 @@ const QuizResultPage: React.FC = () => {
               </Paragraph>
             </div>
 
-            {selectedWrong.question.options && (
+            {(selectedWrong.question.type === 'single' || selectedWrong.question.type === 'multiple' || selectedWrong.question.type === 'judge') && (
               <div style={{ marginBottom: 16 }}>
-                {JSON.parse(selectedWrong.question.options).map((opt: string, i: number) => (
+                {getOptions(selectedWrong.question).map((opt: string, i: number) => (
                   <div key={i} style={{
                     padding: '8px 14px', marginBottom: 6, borderRadius: 8,
                     background: 'rgba(255,255,255,0.02)',

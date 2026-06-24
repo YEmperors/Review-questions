@@ -757,6 +757,16 @@ const QuizPage: React.FC = () => {
 }
 
 function getOptions(question: Question): string[] {
+  if (question.type === 'judge') {
+    if (!question.options || question.options === '[]') return ['对', '错']
+    try {
+      const parsed = JSON.parse(question.options)
+      return parsed.length > 0 ? parsed : ['对', '错']
+    } catch {
+      return ['对', '错']
+    }
+  }
+
   if (!question.options) return []
   try {
     return JSON.parse(question.options)
