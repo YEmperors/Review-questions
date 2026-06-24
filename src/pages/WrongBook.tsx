@@ -118,7 +118,7 @@ const WrongBook: React.FC = () => {
   ]
 
   return (
-    <div className="animate-float-up" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div>
       {/* Header */}
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
@@ -216,9 +216,7 @@ const WrongBook: React.FC = () => {
       {/* 知识点筛选 + 错题列表 */}
       <Card
         bordered={false}
-        className="glass-card"
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
-        bodyStyle={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
+        style={{ borderRadius: 14 }}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ color: '#e2e8f0', fontWeight: 600 }}>错题列表</span>
@@ -226,23 +224,21 @@ const WrongBook: React.FC = () => {
         }
       >
         {wrongRecords.length > 0 ? (
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <Table
-              rowKey="id"
-              columns={columns}
-              dataSource={wrongRecords}
-              pagination={{
-                defaultPageSize: 15,
-                showSizeChanger: true,
-                pageSizeOptions: ['15', '30', '50', '100'],
-                showTotal: total => `共 ${total} 题`,
-                style: { marginTop: 12 }
-              }}
-              size="small"
-              scroll={{ y: 'calc(100vh - 300px)' }}
-              style={{ marginTop: -8 }}
-            />
-          </div>
+          <Table
+            rowKey="id"
+            columns={columns}
+            dataSource={wrongRecords}
+            pagination={{
+              defaultPageSize: 15,
+              showSizeChanger: true,
+              pageSizeOptions: ['15', '30', '50'],
+              showTotal: total => `共 ${total} 题`,
+              style: { marginTop: 12 }
+            }}
+            size="small"
+            scroll={{ y: 420 }}
+            style={{ marginTop: -8 }}
+          />
         ) : (
           <Empty
             description={<span style={{ color: '#64748b' }}>暂无错题记录，继续加油！🎉</span>}

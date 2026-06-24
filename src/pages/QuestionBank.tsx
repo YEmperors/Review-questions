@@ -575,6 +575,35 @@ D. 黄瓜
         <Col span={16}>
           <Card size="small" title="题库分类">
             <Space wrap>
+              <span className="bank-tag-item">
+                <Tag
+                  color={!selectedBank ? 'blue' : 'default'}
+                  style={{ cursor: 'pointer', padding: '4px 12px' }}
+                  onClick={() => setSelectedBank(undefined)}
+                >
+                  全部 ({bankCounts[0] ?? 0})
+                </Tag>
+                <span className="bank-tag-action">
+                  <Popconfirm
+                    title="清空全部题库？"
+                    description={`将删除全部 ${banks.length} 个题库及所有 ${bankCounts[0] ?? 0} 道题目，此操作不可恢复！`}
+                    okText="确认清空"
+                    okButtonProps={{ danger: true }}
+                    cancelText="取消"
+                    onConfirm={handleDeleteAllBanks}
+                    disabled={(bankCounts[0] ?? 0) === 0 && banks.length === 0}
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      disabled={(bankCounts[0] ?? 0) === 0 && banks.length === 0}
+                      title="清空全部题库"
+                    />
+                  </Popconfirm>
+                </span>
+              </span>
               {banks.map(bank => (
                 <span key={bank.id} className="bank-tag-item">
                   <Tag
@@ -653,20 +682,18 @@ D. 黄瓜
       </Card>
 
       {/* 题目列表 */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <Table
-          rowSelection={{
-            selectedRowKeys,
-            onChange: newSelectedRowKeys => setSelectedRowKeys(newSelectedRowKeys),
-          }}
-          rowKey="id"
-          columns={columns}
-          dataSource={questions}
-          pagination={{ defaultPageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: total => `共 ${total} 条` }}
-          size="small"
-          scroll={{ y: 'calc(100vh - 350px)' }}
-        />
-      </div>
+      <Table
+        rowSelection={{
+          selectedRowKeys,
+          onChange: newSelectedRowKeys => setSelectedRowKeys(newSelectedRowKeys),
+        }}
+        rowKey="id"
+        columns={columns}
+        dataSource={questions}
+        pagination={{ defaultPageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: total => `共 ${total} 条` }}
+        size="small"
+        scroll={{ y: 500 }}
+      />
 
       {/* 新建题库弹窗 */}
       <Modal

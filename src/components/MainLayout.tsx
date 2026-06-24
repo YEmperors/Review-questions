@@ -203,10 +203,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <Content style={{
           margin: 0,
           padding: '24px 28px',
-          overflow: 'hidden',
+          overflow: 'auto',
           height: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
           background: 'transparent',
           position: 'relative',
         }}>
@@ -234,7 +232,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             zIndex: 0,
           }} />
 
-          <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', animation: 'fadeInUp 0.3s ease' }}>
+          <div style={{ position: 'relative', zIndex: 1, animation: 'fadeInUp 0.3s ease' }}>
             {children}
           </div>
         </Content>

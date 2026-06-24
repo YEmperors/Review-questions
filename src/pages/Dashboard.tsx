@@ -153,9 +153,9 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="animate-float-up" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div className="animate-float-up">
       {/* Header */}
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexShrink: 0 }}>
+      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <Title level={2} style={{ margin: 0, color: '#e2e8f0', fontWeight: 700 }}>
             学习概览 📊
@@ -184,12 +184,12 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* 今日目标 */}
-      <div className="animate-delay-1 animate-float-up" style={{ animationFillMode: 'both', flexShrink: 0 }}>
+      <div className="animate-delay-1 animate-float-up" style={{ animationFillMode: 'both' }}>
       <Card
         bordered={false}
         className="glass-card"
         style={{
-          marginBottom: 16,
+          marginBottom: 24,
           background: goalAchieved
             ? 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(30,30,46,0.7) 100%)'
             : 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(30,30,46,0.7) 100%)',
@@ -228,8 +228,8 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* 统计卡片 */}
-      <div className="animate-delay-2 animate-float-up" style={{ animationFillMode: 'both', flexShrink: 0 }}>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <div className="animate-delay-2 animate-float-up" style={{ animationFillMode: 'both' }}>
+      <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <StatCard
             title="题库总量"
@@ -275,8 +275,8 @@ const Dashboard: React.FC = () => {
       </Row>
       </div>
 
-      <div className="animate-delay-3 animate-float-up" style={{ animationFillMode: 'both', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <Row gutter={16} style={{ marginBottom: 16, flex: 1, minHeight: 0 }}>
+      <div className="animate-delay-3 animate-float-up" style={{ animationFillMode: 'both' }}>
+      <Row gutter={16} style={{ marginBottom: 24 }}>
         {/* 答题趋势图 */}
         <Col span={24}>
           <Card
@@ -287,7 +287,7 @@ const Dashboard: React.FC = () => {
             bodyStyle={{ paddingTop: 8 }}
           >
             {dailyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={dailyData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="countGrad" x1="0" y1="0" x2="0" y2="1">
@@ -309,7 +309,7 @@ const Dashboard: React.FC = () => {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <Empty description={<span style={{ color: '#64748b' }}>暂无答题记录</span>} style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }} />
+              <Empty description={<span style={{ color: '#64748b' }}>暂无答题记录</span>} style={{ height: 260, display: 'flex', flexDirection: 'column', justifyContent: 'center' }} />
             )}
           </Card>
         </Col>
@@ -317,15 +317,14 @@ const Dashboard: React.FC = () => {
         {/* 雷达图已移除 */}
       </Row>
 
-      <Row gutter={16} style={{ flex: 1, minHeight: 0 }}>
+      <Row gutter={16}>
         {/* 待复习题目 */}
         {dueQuestions.length > 0 && (
-          <Col span={24} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Col span={24}>
             <Card
               title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>🔄 待复习题目</span>}
               bordered={false}
               className="glass-card"
-              bodyStyle={{ flex: 1, overflowY: 'auto' }}
               extra={
                 <Button
                   type="link"
