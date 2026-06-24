@@ -234,7 +234,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             zIndex: 0,
           }} />
 
-          <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, animation: 'fadeInUp 0.3s ease' }}>
+          <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', animation: 'fadeInUp 0.3s ease' }}>
             {children}
           </div>
         </Content>
