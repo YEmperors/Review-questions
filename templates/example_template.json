@@ -1,0 +1,69 @@
+[
+  {
+    "type": "single",
+    "content": "地球是太阳系中的第几大行星？",
+    "options": [
+      "水星",
+      "金星",
+      "地球",
+      "火星"
+    ],
+    "answer": "C",
+    "analysis": "按离太阳由近及远的顺序是水星、金星、地球...",
+    "difficulty": 1,
+    "knowledge_point": "天文基础"
+  },
+  {
+    "type": "multiple",
+    "content": "以下哪些属于前端开发框架？",
+    "options": [
+      "Vue",
+      "React",
+      "Angular",
+      "Django"
+    ],
+    "answer": "A,B,C",
+    "analysis": "Django属于Python后端框架。",
+    "difficulty": 2,
+    "knowledge_point": "Web前端"
+  },
+  {
+    "type": "judge",
+    "content": "计算机中，1个字节等于8个位(bit)。",
+    "options": [
+      "对",
+      "错"
+    ],
+    "answer": "A",
+    "analysis": "1 Byte = 8 bits，所以是正确的。",
+    "difficulty": 1,
+    "knowledge_point": "计算机基础"
+  },
+  {
+    "type": "fill",
+    "content": "水的化学式是 _____。",
+    "options": [],
+    "answer": "H2O",
+    "analysis": "注意大小写字母。",
+    "difficulty": 1,
+    "knowledge_point": "化学常识"
+  },
+  {
+    "type": "short_answer",
+    "content": "请简述什么是面向对象编程？",
+    "options": [],
+    "answer": "是一种将数据和处理数据的方法封装成对象...",
+    "analysis": "关键词需包含封装、继承、多态。",
+    "difficulty": 2,
+    "knowledge_point": "软件工程"
+  },
+  {
+    "type": "coding",
+    "content": "使用 JS 实现冒泡排序算法。",
+    "options": [],
+    "answer": "function bubbleSort(arr) {...}",
+    "analysis": "注意时间复杂度控制在 O(n^2)。",
+    "difficulty": 3,
+    "knowledge_point": "数据结构"
+  }
+]
