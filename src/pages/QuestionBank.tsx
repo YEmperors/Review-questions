@@ -415,8 +415,6 @@ const QuestionBankPage: React.FC = () => {
               options: parsedOptions.length > 0 ? JSON.stringify(parsedOptions) : null,
               answer: answer,
               analysis: row.analysis || row.解析 || null,
-              difficulty: Number(row.difficulty || row.难度 || 2),
-              knowledge_point: row.knowledge_point || row.知识点 || '',
               tags: null,
               bank_id: importBankId
             }

@@ -159,8 +159,8 @@ export function getQuestionsByIds(ids: number[]): Question[] {
 export function createQuestion(q: Omit<Question, 'id' | 'created_at'>): number {
   const db = dbManager.getDb()
   db.run(
-    'INSERT INTO questions (type, content, options, answer, analysis,  tags, bank_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [q.type, q.content, q.options, q.answer, q.analysis,  q.tags, q.bank_id]
+    'INSERT INTO questions (type, content, options, answer, analysis, tags, bank_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [q.type, q.content, q.options, q.answer, q.analysis, q.tags, q.bank_id]
   )
   const row = selectOne<{ id: number }>('SELECT last_insert_rowid() as id')
   dbManager.markDirty()
@@ -175,8 +175,8 @@ export function createQuestionsBatch(questions: Omit<Question, 'id' | 'created_a
   try {
     for (const q of questions) {
       db.run(
-        'INSERT INTO questions (type, content, options, answer, analysis,  tags, bank_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [q.type, q.content, q.options, q.answer, q.analysis,  q.tags, q.bank_id]
+        'INSERT INTO questions (type, content, options, answer, analysis, tags, bank_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [q.type, q.content, q.options, q.answer, q.analysis, q.tags, q.bank_id]
       )
       const row = selectOne<{ id: number }>('SELECT last_insert_rowid() as id')
       if (row) ids.push(row.id)
@@ -194,8 +194,8 @@ export function createQuestionsBatch(questions: Omit<Question, 'id' | 'created_a
 export function updateQuestion(q: Question): void {
   const db = dbManager.getDb()
   db.run(
-    'UPDATE questions SET type=?, content=?, options=?, answer=?, analysis=?, difficulty=?, knowledge_point=?, tags=?, bank_id=? WHERE id=?',
-    [q.type, q.content, q.options, q.answer, q.analysis,  q.tags, q.bank_id, q.id]
+    'UPDATE questions SET type=?, content=?, options=?, answer=?, analysis=?, tags=?, bank_id=? WHERE id=?',
+    [q.type, q.content, q.options, q.answer, q.analysis, q.tags, q.bank_id, q.id]
   )
   dbManager.markDirty()
 }
