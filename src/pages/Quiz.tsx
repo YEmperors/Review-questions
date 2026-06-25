@@ -40,7 +40,7 @@ const QuizPage: React.FC = () => {
   const [timeLimit, setTimeLimit] = useState<number | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [results, setResults] = useState<QuizResult[]>([])
+  const [results, setResults] = useState<(QuizResult | null)[]>([])
   const [userAnswer, setUserAnswer] = useState<string>('')
   const [showResult, setShowResult] = useState(false)
   const [startTime] = useState(Date.now())
@@ -62,6 +62,7 @@ const QuizPage: React.FC = () => {
       setMode(config.mode || 'practice')
       setTimeLimit(config.timeLimit || null)
       setQuestions(qs)
+      setResults(new Array(qs.length).fill(null))
     } catch {
       navigate('/quiz-setup')
     }
@@ -112,16 +113,21 @@ const QuizPage: React.FC = () => {
       processSpacedRepetition(q.id, quality)
     }
 
-    setResults(prev => [...prev, result])
+    setResults(prev => {
+      const next = [...prev]
+      next[currentIndex] = result
+      return next
+    })
     setShowResult(true)
   }, [questions, currentIndex, userAnswer, mode])
 
   const handleFinish = useCallback(() => {
     const q = getCurrentQuestion(questions, currentIndex)
-    if (userAnswer.trim() && !showResult && q) {
+    if (userAnswer.trim() && !showResult && q && !results[currentIndex]) {
       handleSubmit()
     }
-    sessionStorage.setItem('quiz_results', JSON.stringify(results))
+    // We filter Boolean in case some questions were skipped
+    sessionStorage.setItem('quiz_results', JSON.stringify(results.filter(Boolean)))
     navigate('/quiz-result')
   }, [handleSubmit, userAnswer, showResult, questions, currentIndex, results, navigate])
 
@@ -132,17 +138,20 @@ const QuizPage: React.FC = () => {
     }
   }, [elapsed, timeLimit, mode, handleFinish])
 
-  const handleNext = () => {
-    setUserAnswer('')
-    setShowResult(false)
+  const handleJump = (idx: number) => {
+    if (idx === currentIndex) return
+    setCurrentIndex(idx)
+    setUserAnswer(results[idx]?.userAnswer || '')
+    setShowResult(!!results[idx])
     setAiExplanation('')
     questionStartRef.current = Date.now()
+  }
 
+  const handleNext = () => {
     if (currentIndex + 1 >= questions.length) {
-      sessionStorage.setItem('quiz_results', JSON.stringify(results))
-      navigate('/quiz-result')
+      handleFinish()
     } else {
-      setCurrentIndex(prev => prev + 1)
+      handleJump(currentIndex + 1)
     }
   }
 
@@ -246,8 +255,8 @@ const QuizPage: React.FC = () => {
     )
   }
 
-  const isFinished = currentIndex >= questions.length - 1 && showResult
-  const currentResult = showResult && results.length > 0 ? results[results.length - 1] : null
+  const isFinished = currentIndex >= questions.length - 1 && !!results[currentIndex]
+  const currentResult = showResult ? results[currentIndex] : null
   const answerStatus = currentResult
     ? (currentResult.isCorrect ? 'correct' : (checkAnswer(currentQuestion, currentResult.userAnswer) === 'pending' ? 'pending' : 'wrong'))
     : null
@@ -704,6 +713,7 @@ const QuizPage: React.FC = () => {
             return (
               <div
                 key={idx}
+                onClick={() => handleJump(idx)}
                 style={{
                   width: 32, height: 32, borderRadius: 7,
                   background: bg,
@@ -711,6 +721,7 @@ const QuizPage: React.FC = () => {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 12, fontWeight: 600, color,
                   transition: 'all 0.2s',
+                  cursor: 'pointer',
                 }}
               >
                 {idx + 1}
