@@ -70,13 +70,14 @@ describe('Adaptive Difficulty Algorithm - getSmartQuestions', () => {
     
     // ID 2 is a wrong question
     vi.mocked(repositories.getWrongQuestionsWithQuestions).mockReturnValue([{
-      question_id: 2, user_answer: 'wrong', is_correct: 0, id: 1, time_spent: 0, quiz_mode: 'practice', created_at: ''
+      question_id: 2, user_answer: 'wrong', is_correct: 0, id: 1, time_spent: 0, quiz_mode: 'practice', created_at: '',
+      question: mockQuestions[1]
     }])
     
     // 'Weak' KP has 50% success rate
     vi.mocked(repositories.getKnowledgePointStats).mockReturnValue([
-      { knowledge_point: 'Strong', correct_count: 10, total_count: 10, rate: 100 },
-      { knowledge_point: 'Weak', correct_count: 5, total_count: 10, rate: 50 }
+      { knowledge_point: 'Strong', correct: 10, total: 10, rate: 100 },
+      { knowledge_point: 'Weak', correct: 5, total: 10, rate: 50 }
     ])
 
     const result = getSmartQuestions(undefined, 2)
