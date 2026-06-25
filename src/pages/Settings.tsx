@@ -358,7 +358,7 @@ const Settings: React.FC = () => {
                       {!!(window as any).__TAURI__ && (
                         <Space>
                           <Button onClick={handleChangeDbPath}>添加新目录</Button>
-                          <Button danger onClick={handleRestoreDefaultDbPath}>恢复默认路径</Button>
+                          <Button type="text" danger onClick={handleRestoreDefaultDbPath}>恢复默认</Button>
                         </Space>
                       )}
                     </div>

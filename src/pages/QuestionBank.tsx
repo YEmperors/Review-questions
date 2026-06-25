@@ -98,55 +98,47 @@ const QuestionBankPage: React.FC = () => {
 
   // Tauri 原生文件拖拽支持
   useEffect(() => {
-    let unlistenHover: () => void
-    let unlistenDrop: () => void
-    let unlistenCancel: () => void
+    if (!(window as any).__TAURI__) return
 
-    const setupTauriDragDrop = async () => {
-      if (!(window as any).__TAURI__) return
+    const unlistenHoverPromise = listen('tauri://file-drop-hover', () => {
+      setIsDragging(true)
+    })
 
-      unlistenHover = await listen('tauri://file-drop-hover', () => {
-        setIsDragging(true)
-      })
+    const unlistenCancelPromise = listen('tauri://file-drop-cancelled', () => {
+      setIsDragging(false)
+    })
 
-      unlistenCancel = await listen('tauri://file-drop-cancelled', () => {
-        setIsDragging(false)
-      })
-
-      unlistenDrop = await listen('tauri://file-drop', async (event: any) => {
-        setIsDragging(false)
-        const paths = event.payload as string[]
-        if (paths && paths.length > 0) {
-          const path = paths[0]
-          const isSupported = /\.(xlsx|xls|csv|json|txt|docx)$/i.test(path)
-          if (isSupported) {
-            try {
-              // 提取文件名
-              const filename = path.split('\\').pop()?.split('/').pop() || 'file'
-              // 读取二进制数据
-              const uint8Array = await readBinaryFile(path)
-              // 构造 DOM File 对象以便兼容现有的导入逻辑
-              const file = new File([uint8Array as any], filename)
-              // 如果没有选择题库，使用默认题库1
-              const currentSelectedBank = selectedBank ?? (banks[0]?.id ?? 1)
-              setImportBankId(currentSelectedBank)
-              handleImport(file, currentSelectedBank)
-            } catch (err: any) {
-              message.error('读取文件失败: ' + err.message)
-            }
-          } else {
-            message.error('不支持的文件格式，请上传 Word, Excel, CSV, JSON 或 TXT 文件')
+    const unlistenDropPromise = listen('tauri://file-drop', async (event: any) => {
+      setIsDragging(false)
+      const paths = event.payload as string[]
+      if (paths && paths.length > 0) {
+        const path = paths[0]
+        const isSupported = /\.(xlsx|xls|csv|json|txt|docx)$/i.test(path)
+        if (isSupported) {
+          try {
+            // 提取文件名
+            const filename = path.split('\\').pop()?.split('/').pop() || 'file'
+            // 读取二进制数据
+            const uint8Array = await readBinaryFile(path)
+            // 构造 DOM File 对象以便兼容现有的导入逻辑
+            const file = new File([uint8Array as any], filename)
+            // 如果没有选择题库，使用默认题库1
+            const currentSelectedBank = selectedBank ?? (banks[0]?.id ?? 1)
+            setImportBankId(currentSelectedBank)
+            handleImport(file, currentSelectedBank)
+          } catch (err: any) {
+            message.error('读取文件失败: ' + err.message)
           }
+        } else {
+          message.error('不支持的文件格式，请上传 Word, Excel, CSV, JSON 或 TXT 文件')
         }
-      })
-    }
-
-    setupTauriDragDrop()
+      }
+    })
 
     return () => {
-      if (unlistenHover) unlistenHover()
-      if (unlistenDrop) unlistenDrop()
-      if (unlistenCancel) unlistenCancel()
+      unlistenHoverPromise.then(f => f())
+      unlistenDropPromise.then(f => f())
+      unlistenCancelPromise.then(f => f())
     }
   }, [selectedBank, banks]) // 依赖 selectedBank 保证导入到正确的题库
 
