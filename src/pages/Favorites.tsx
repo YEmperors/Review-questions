@@ -17,11 +17,11 @@ const { Option } = Select
 
 const typeLabels: Record<string, string> = {
   single: '单选题', multiple: '多选题', judge: '判断题',
-  fill: '填空题', short_answer: '简答题', coding: '编程题'
+  fill: '填空题', short_answer: '简答题'
 }
 const typeColors: Record<string, string> = {
   single: '#6366f1', multiple: '#8b5cf6', judge: '#06b6d4',
-  fill: '#f59e0b', short_answer: '#22c55e', coding: '#ef4444'
+  fill: '#f59e0b', short_answer: '#22c55e'
 }
 const diffLabels: Record<number, { text: string; color: string }> = {
   1: { text: '简单', color: '#22c55e' },

@@ -21,11 +21,11 @@ const { TextArea } = Input
 
 const typeLabels: Record<string, string> = {
   single: '单选题', multiple: '多选题', judge: '判断题',
-  fill: '填空题', short_answer: '简答题', coding: '编程题'
+  fill: '填空题', short_answer: '简答题'
 }
 const typeColors: Record<string, string> = {
   single: '#6366f1', multiple: '#8b5cf6', judge: '#06b6d4',
-  fill: '#f59e0b', short_answer: '#22c55e', coding: '#ef4444'
+  fill: '#f59e0b', short_answer: '#22c55e'
 }
 const diffLabels: Record<number, { text: string; color: string; bg: string }> = {
   1: { text: '简单', color: '#22c55e', bg: 'rgba(34,197,94,0.15)' },
@@ -343,7 +343,7 @@ const QuizPage: React.FC = () => {
         }
         
         // 填空/简答题按下Enter自动聚焦输入框
-        if (e.key === 'Enter' && currentQuestion && ['fill', 'short_answer', 'coding'].includes(currentQuestion.type)) {
+        if (e.key === 'Enter' && currentQuestion && ['fill', 'short_answer'].includes(currentQuestion.type)) {
           e.preventDefault()
           document.getElementById('quiz-text-input')?.focus()
           return
@@ -439,11 +439,11 @@ const QuizPage: React.FC = () => {
   const getShortcutHint = () => {
     if (currentQuestion.type === 'single' || currentQuestion.type === 'judge') return `方向键切换 · Enter ${submitActionText} · Esc 退出`
     if (currentQuestion.type === 'multiple') return `方向键+Enter 选中 · Ctrl+Enter ${submitActionText} · Esc 退出`
-    if (currentQuestion.type === 'coding') return `Ctrl+Enter ${submitActionText} · Esc 退出`
+    if (currentQuestion.type === 'short_answer') return `Ctrl+Enter ${submitActionText} · Esc 退出`
     return `Enter ${submitActionText} · Esc 退出`
   }
   const getButtonShortcutText = () => {
-    const isCtrl = currentQuestion.type === 'multiple' || currentQuestion.type === 'coding'
+    const isCtrl = currentQuestion.type === 'multiple' || currentQuestion.type === 'short_answer'
     const btnAction = mode === 'exam' ? (currentIndex === questions.length - 1 ? '交卷' : '下一题') : '提交答案'
     return `${btnAction} (${isCtrl ? 'Ctrl + Enter' : 'Enter'})`
   }
@@ -671,26 +671,6 @@ const QuizPage: React.FC = () => {
               />
             )}
 
-            {currentQuestion.type === 'coding' && (
-              <TextArea
-                key={currentQuestion.id}
-                id="quiz-text-input"
-                autoFocus
-                value={userAnswer}
-                onChange={e => setUserAnswer(e.target.value)}
-                placeholder="请编写代码..."
-                rows={12}
-                style={{
-                  marginTop: 8,
-                  borderRadius: 10,
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: 13,
-                  background: '#0d1117',
-                  borderColor: 'rgba(255,255,255,0.1)',
-                  color: '#e2e8f0',
-                }}
-              />
-            )}
 
             <div style={{ marginTop: 24, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
               <Text style={{ fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -749,7 +729,7 @@ const QuizPage: React.FC = () => {
                     fontSize: 15,
                     color: answerStatus === 'correct' ? '#22c55e' : answerStatus === 'pending' ? '#f59e0b' : '#ef4444'
                   }}>
-                    {answerStatus === 'correct' ? '回答正确！' : answerStatus === 'pending' ? '待评阅（简答题/编程题）' : '回答错误'}
+                    {answerStatus === 'correct' ? '回答正确！' : answerStatus === 'pending' ? '待评阅（简答题）' : '回答错误'}
                   </Text>
                   <Text style={{ color: '#64748b', fontSize: 12, marginLeft: 8 }}>
                     用时 {formatTime(currentResult.timeSpent)}
@@ -758,7 +738,7 @@ const QuizPage: React.FC = () => {
                     <Text style={{ color: '#94a3b8' }}>正确答案：</Text>
                     <Text strong style={{
                       color: '#22c55e',
-                      fontFamily: currentQuestion.type === 'coding' ? 'JetBrains Mono, monospace' : undefined,
+                      fontFamily: undefined,
                     }}>
                       {currentQuestion.answer}
                     </Text>

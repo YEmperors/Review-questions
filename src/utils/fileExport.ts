@@ -26,7 +26,7 @@ export async function exportFile(filename: string, uint8Array: Uint8Array, mimeT
     }
   } else {
     try {
-      const blob = new Blob([uint8Array], { type: mimeType })
+      const blob = new Blob([uint8Array as any], { type: mimeType })
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
       link.download = filename

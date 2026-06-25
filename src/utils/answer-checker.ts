@@ -57,8 +57,7 @@ export function checkAnswer(question: Question, userAnswer: string): 'correct' |
       return ca.split('|').map(a => a.trim()).some(a => a.toUpperCase() === ua) ? 'correct' : 'wrong'
 
     case QuestionType.SHORT_ANSWER:
-    case QuestionType.CODING:
-      // 简答题和编程题标记为"待评阅"，不自动判定正确/错误
+      // 简答题标记为"待评阅"，不自动判定正确/错误
       // 避免污染正确率统计
       return 'pending'
 

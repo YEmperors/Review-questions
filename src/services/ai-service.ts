@@ -58,8 +58,7 @@ export async function generateQuestionWithAI(
     [QuestionType.MULTIPLE]: '多选题',
     [QuestionType.JUDGE]: '判断题',
     [QuestionType.FILL]: '填空题',
-    [QuestionType.SHORT_ANSWER]: '简答题',
-    [QuestionType.CODING]: '编程题'
+    [QuestionType.SHORT_ANSWER]: '简答题'
   }
 
   const prompt = `请生成 ${count} 道"${topic}"相关的${typeNames[type]}。
@@ -76,8 +75,7 @@ export async function generateQuestionWithAI(
 
 注意：
 - 判断题options填["对","错"]
-- 填空题和简答题options为null
-- 编程题options为null，answer中包含代码和解题思路
+- 填空题options为null，answer为填空的正确内容
 - 确保答案准确无误`
 
   return callAI(prompt)

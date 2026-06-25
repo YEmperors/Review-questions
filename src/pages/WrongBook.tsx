@@ -24,7 +24,7 @@ const { Option } = Select
 
 const typeLabels: Record<string, string> = {
   single: '单选题', multiple: '多选题', judge: '判断题',
-  fill: '填空题', short_answer: '简答题', coding: '编程题'
+  fill: '填空题', short_answer: '简答题'
 }
 
 const WrongBook: React.FC = () => {

@@ -4,8 +4,7 @@ export enum QuestionType {
   MULTIPLE = 'multiple',   // 多选题
   JUDGE = 'judge',         // 判断题
   FILL = 'fill',           // 填空题
-  SHORT_ANSWER = 'short_answer', // 简答题
-  CODING = 'coding'        // 编程题
+  SHORT_ANSWER = 'short_answer' // 简答题
 }
 
 

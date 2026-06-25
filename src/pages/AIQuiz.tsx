@@ -167,7 +167,6 @@ const AIQuiz: React.FC = () => {
                 <Option value="judge">判断题</Option>
                 <Option value="fill">填空题</Option>
                 <Option value="short_answer">简答题</Option>
-                <Option value="coding">编程题</Option>
               </Select>
             </Form.Item>
 

@@ -26,7 +26,7 @@ const { Option } = Select
 
 const typeLabels: Record<string, string> = {
   single: '单选题', multiple: '多选题', judge: '判断题',
-  fill: '填空题', short_answer: '简答题', coding: '编程题'
+  fill: '填空题', short_answer: '简答题'
 }
 const diffLabels: Record<number, { text: string; color: string }> = {
   1: { text: '简单', color: 'green' },
@@ -525,8 +525,7 @@ const QuestionBankPage: React.FC = () => {
       '多选': QuestionType.MULTIPLE, '多选题': QuestionType.MULTIPLE, 'multiple': QuestionType.MULTIPLE,
       '判断': QuestionType.JUDGE, '判断题': QuestionType.JUDGE, 'judge': QuestionType.JUDGE,
       '填空': QuestionType.FILL, '填空题': QuestionType.FILL, 'fill': QuestionType.FILL,
-      '简答': QuestionType.SHORT_ANSWER, '简答题': QuestionType.SHORT_ANSWER, 'short_answer': QuestionType.SHORT_ANSWER,
-      '编程': QuestionType.CODING, '编程题': QuestionType.CODING, 'coding': QuestionType.CODING,
+      '简答': QuestionType.SHORT_ANSWER, '简答题': QuestionType.SHORT_ANSWER, 'short_answer': QuestionType.SHORT_ANSWER
     }
     return map[type] || QuestionType.SINGLE
   }
@@ -772,7 +771,6 @@ D. 黄瓜
             <Option value="judge">判断题</Option>
             <Option value="fill">填空题</Option>
             <Option value="short_answer">简答题</Option>
-            <Option value="coding">编程题</Option>
           </Select>
           <Input
             prefix={<SearchOutlined style={{ color: '#64748b' }} />}
@@ -873,7 +871,6 @@ D. 黄瓜
                   <Option value="judge">判断题</Option>
                   <Option value="fill">填空题</Option>
                   <Option value="short_answer">简答题</Option>
-                  <Option value="coding">编程题</Option>
                 </Select>
               </Form.Item>
             </Col>
