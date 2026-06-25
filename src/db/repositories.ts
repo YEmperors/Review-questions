@@ -269,6 +269,27 @@ export function deleteQuizRecord(id: number): void {
   dbManager.markDirty()
 }
 
+export function removeQuestionFromWrongBook(questionId: number): void {
+  const db = dbManager.getDb()
+  // 删除该题目的所有答题记录，这样它就不再属于错题
+  db.run('DELETE FROM quiz_records WHERE question_id = ?', [questionId])
+  // 同时删除它的复习计划，这样它就不再出现在待复习中
+  db.run('DELETE FROM spaced_repetition WHERE question_id = ?', [questionId])
+  dbManager.markDirty()
+}
+
+export function clearWrongBook(): void {
+  const db = dbManager.getDb()
+  
+  // 1. 删除所有的错题记录（保留做对的记录，这样主页打卡图表不会掉）
+  db.run('DELETE FROM quiz_records WHERE is_correct = 0')
+  
+  // 2. 清空所有的记忆曲线复习计划（包括做对和做错的），确保“待复习”彻底归零
+  db.run('DELETE FROM spaced_repetition')
+  
+  dbManager.markDirty()
+}
+
 export function getQuizRecords(questionId?: number, limit?: number): QuizRecord[] {
   if (questionId !== undefined) {
     return selectAll<QuizRecord>('SELECT * FROM quiz_records WHERE question_id = ? ORDER BY created_at DESC', [questionId])
@@ -444,6 +465,12 @@ export function getDueReviewQuestions(): number[] {
   const today = new Date().toISOString().slice(0, 10)
   const rows = selectAll<{ question_id: number }>('SELECT question_id FROM spaced_repetition WHERE next_review <= ?', [today])
   return rows.map(r => r.question_id)
+}
+
+export function debugForceDueReview(): void {
+  const db = dbManager.getDb()
+  db.run("UPDATE spaced_repetition SET next_review = '2000-01-01'")
+  dbManager.markDirty()
 }
 
 // ==================== 收藏夹 ====================

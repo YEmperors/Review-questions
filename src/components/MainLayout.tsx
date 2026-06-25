@@ -39,7 +39,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [wrongCount, setWrongCount] = useState(0)
 
   useEffect(() => {
-    setWrongCount(getWrongQuestionsWithQuestions().length)
+    const updateWrongCount = () => {
+      setWrongCount(getWrongQuestionsWithQuestions().length)
+    }
+    
+    updateWrongCount()
+    
+    window.addEventListener('db_updated', updateWrongCount)
+    return () => {
+      window.removeEventListener('db_updated', updateWrongCount)
+    }
   }, [location.pathname])
 
   const siderStyle: React.CSSProperties = {
@@ -121,22 +130,30 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               key: item.key,
               title: '', // 强制禁用 Menu 自带的所有原生气泡和不可控气泡
               icon: (
-                <Tooltip title={collapsed ? item.label : ''} placement="right" mouseEnterDelay={0.1}>
-                  <span style={{ fontSize: 16, position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                    {item.icon}
-                    {hasWrong && collapsed && (
-                      <span style={{
-                        position: 'absolute',
-                        top: -2,
-                        right: -4,
-                        width: 6,
-                        height: 6,
-                        backgroundColor: '#ef4444',
-                        borderRadius: '50%',
-                      }} />
-                    )}
-                  </span>
-                </Tooltip>
+                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                  <Tooltip title={collapsed ? (hasWrong ? `${item.label} (${wrongCount})` : item.label) : ''} placement="right" mouseEnterDelay={0.1}>
+                    <span style={{ 
+                      fontSize: 16,
+                      color: hasWrong && collapsed ? '#ef4444' : undefined,
+                      transition: 'color 0.3s'
+                    }}>
+                      {item.icon}
+                    </span>
+                  </Tooltip>
+                  {hasWrong && collapsed && (
+                    <div className="wrong-pulse-dot" style={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -8,
+                      width: 8,
+                      height: 8,
+                      backgroundColor: '#ef4444',
+                      borderRadius: '50%',
+                      pointerEvents: 'none',
+                      zIndex: 10,
+                    }} />
+                  )}
+                </div>
               ),
               label: (
                 <span style={{ fontWeight: location.pathname === item.key ? 600 : 400 }}>
@@ -274,6 +291,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         }
         .ant-card:hover {
           box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+        }
+        .wrong-pulse-dot {
+          animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
       `}</style>
     </Layout>

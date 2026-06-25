@@ -205,6 +205,7 @@ class DatabaseManager {
 
   markDirty(): void {
     this.pendingSave = true
+    window.dispatchEvent(new Event('db_updated'))
   }
 
   async saveNow(): Promise<boolean> {

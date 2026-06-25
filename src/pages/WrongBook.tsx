@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   Card, Table, Tag, Space, Button, Select, Typography,
-  Empty, Modal, Tooltip, Row, Col, Statistic, List
+  Empty, Modal, Tooltip, Row, Col, Statistic, List, Popconfirm
 } from 'antd'
 import {
   CloseCircleOutlined, RedoOutlined,
@@ -13,7 +13,7 @@ import {
 } from 'recharts'
 import {
   getKnowledgePointStats, getDueReviewQuestions, getQuestionsByIds,
-  getWrongQuestionsWithQuestions, deleteQuizRecord
+  getWrongQuestionsWithQuestions, removeQuestionFromWrongBook, debugForceDueReview, clearWrongBook
 } from '../db/repositories'
 import { Question, QuizRecord } from '../types'
 import { useNavigate } from 'react-router-dom'
@@ -64,7 +64,7 @@ const WrongBook: React.FC = () => {
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: () => {
-        deleteQuizRecord(id)
+        removeQuestionFromWrongBook(id)
         loadData()
       }
     })
@@ -141,7 +141,7 @@ const WrongBook: React.FC = () => {
             type="link"
             size="small"
             danger
-            onClick={() => handleDeleteRecord(record.id)}
+            onClick={() => handleDeleteRecord(record.question.id)}
             style={{ padding: 0 }}
           >
             移除
@@ -164,6 +164,30 @@ const WrongBook: React.FC = () => {
           </Text>
         </div>
         <Space>
+          <Popconfirm
+            title="确定要清空错题本吗？"
+            description="这将删除所有的错题记录和它们的复习计划，此操作不可恢复！"
+            onConfirm={() => {
+              clearWrongBook()
+              loadData()
+            }}
+            okText="确定清空"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+          >
+            <Button danger style={{ borderRadius: 8 }} disabled={wrongRecords.length === 0}>
+              清空错题本
+            </Button>
+          </Popconfirm>
+          <Button
+            onClick={() => {
+              debugForceDueReview()
+              loadData()
+            }}
+            style={{ borderRadius: 8 }}
+          >
+            🧪 模拟时间加速
+          </Button>
           <Button
             icon={<PlayCircleOutlined />}
             onClick={handleReviewDue}
@@ -189,7 +213,7 @@ const WrongBook: React.FC = () => {
 
       {/* 统计卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={24} md={8}>
+        <Col xs={24} md={12}>
           <Card
             bordered={false}
             style={{
@@ -216,7 +240,7 @@ const WrongBook: React.FC = () => {
             </div>
           </Card>
         </Col>
-        <Col xs={24} md={8}>
+        <Col xs={24} md={12}>
           <Card
             bordered={false}
             style={{
@@ -243,63 +267,7 @@ const WrongBook: React.FC = () => {
             </div>
           </Card>
         </Col>
-        <Col xs={24} md={8}>
-          <Card
-            bordered={false}
-            style={{
-              borderRadius: 12,
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(30,30,46,0.9) 100%)',
-              border: '1px solid rgba(99,102,241,0.15)',
-            }}
-            bodyStyle={{ padding: '16px 20px' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: 10,
-                background: 'rgba(99,102,241,0.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#818cf8', fontSize: 18,
-              }}>
-                <BarChartOutlined />
-              </div>
-              <div>
-                <Text style={{ color: '#94a3b8', fontSize: 12, display: 'block' }}>薄弱知识点</Text>
-                <Text style={{ color: '#818cf8', fontSize: 24, fontWeight: 700 }}>{weakKps.length}</Text>
-                <Text style={{ color: '#64748b', fontSize: 12 }}> 个</Text>
-              </div>
-            </div>
-          </Card>
-        </Col>
       </Row>
-
-      {/* 薄弱点分析图 */}
-      {weakKps.length > 0 && (
-        <Card
-          title={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>⚠️ 薄弱知识点分析</span>}
-          bordered={false}
-          style={{ borderRadius: 14, marginBottom: 20 }}
-        >
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={weakKps.slice(0, 8)} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="knowledge_point" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-              <RTooltip
-                contentStyle={{
-                  background: '#252535', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8, fontSize: 12,
-                }}
-                formatter={(value: any) => [`${value}%`, '正确率']}
-              />
-              <Bar dataKey="rate" radius={[6, 6, 0, 0]}>
-                {weakKps.slice(0, 8).map((entry, index) => (
-                  <Cell key={index} fill={entry.rate < 40 ? '#ef4444' : entry.rate < 60 ? '#f59e0b' : '#f97316'} opacity={0.85} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
 
       {/* 知识点筛选 + 错题列表 */}
       <Card
@@ -336,7 +304,7 @@ const WrongBook: React.FC = () => {
               style: { marginTop: 12 }
             }}
             size="small"
-            scroll={{ x: 600, y: 420 }}
+            scroll={{ x: 600 }}
             style={{ marginTop: -8 }}
           />
         ) : (

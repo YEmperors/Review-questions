@@ -203,9 +203,11 @@ const QuizPage: React.FC = () => {
   // 键盘快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 当焦点在输入框时不触发快捷键（除了Enter）
-      const tagName = (e.target as HTMLElement)?.tagName
-      const isInput = tagName === 'INPUT' || tagName === 'TEXTAREA'
+      const target = e.target as HTMLInputElement
+      const isInput = target?.tagName === 'INPUT' && !['radio', 'checkbox', 'button', 'submit'].includes(target.type)
+      const isRadioOrCheckbox = target?.tagName === 'INPUT' && ['radio', 'checkbox'].includes(target.type)
+      const isTextarea = target?.tagName === 'TEXTAREA'
+      const isTyping = isInput || isTextarea
 
       if (showResult) {
         if (e.key === 'Enter' || e.key === 'ArrowRight' || e.key.toLowerCase() === 'n') {
@@ -219,19 +221,50 @@ const QuizPage: React.FC = () => {
         return
       }
 
-      if (!isInput && currentQuestion && (currentQuestion.type === 'single' || currentQuestion.type === 'judge')) {
-        const keyMap: Record<string, number> = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, '1': 0, '2': 1, '3': 2, '4': 3 }
-        const idx = keyMap[e.key.toLowerCase()]
-        if (idx !== undefined) {
+      // 星标快捷键 S
+      if (e.key.toLowerCase() === 's' && !isTyping) {
+        e.preventDefault()
+        handleToggleStar()
+      }
+
+      // AI解释快捷键 E
+      if (e.key.toLowerCase() === 'e' && !isTyping && showResult) {
+        e.preventDefault()
+        handleAIExplain()
+      }
+
+      // 方向键切换单选/判断题答案
+      // 如果焦点在单选框本身上，放行给 Ant Design 处理，否则我们自己处理
+      if (!isTyping && !isRadioOrCheckbox && currentQuestion && ['single', 'judge'].includes(currentQuestion.type) && !showResult) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+          e.preventDefault()
           const options = getOptions(currentQuestion)
-          if (idx < options.length) {
-            setUserAnswer(String.fromCharCode(65 + idx))
+          const currentIdx = userAnswer ? userAnswer.charCodeAt(0) - 65 : -1
+          
+          let newIdx = 0
+          if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+            newIdx = currentIdx < options.length - 1 ? currentIdx + 1 : 0
+          } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+            newIdx = currentIdx > 0 ? currentIdx - 1 : options.length - 1
           }
+          setUserAnswer(String.fromCharCode(65 + newIdx))
         }
       }
 
-      if (e.key === 'Enter' && userAnswer.trim() && !isInput) {
-        handleSubmit()
+      // 填空/简答题按下Enter自动聚焦输入框
+      if (e.key === 'Enter' && !isTyping && currentQuestion && ['fill', 'short_answer', 'coding'].includes(currentQuestion.type) && !showResult) {
+        e.preventDefault()
+        document.getElementById('quiz-text-input')?.focus()
+        return
+      }
+
+      // 提交答案
+      if (e.key === 'Enter' && userAnswer.trim()) {
+        // 在普通输入框按回车提交，在多行文本框按 Ctrl+Enter 提交
+        if (!isTextarea || (isTextarea && (e.ctrlKey || e.metaKey))) {
+          e.preventDefault()
+          handleSubmit()
+        }
       }
     }
 
@@ -459,6 +492,9 @@ const QuizPage: React.FC = () => {
 
             {(currentQuestion.type === 'fill' || currentQuestion.type === 'short_answer') && (
               <Input
+                key={currentQuestion.id}
+                id="quiz-text-input"
+                autoFocus
                 value={userAnswer}
                 onChange={e => setUserAnswer(e.target.value)}
                 onKeyDown={e => {
@@ -480,6 +516,9 @@ const QuizPage: React.FC = () => {
 
             {currentQuestion.type === 'coding' && (
               <TextArea
+                key={currentQuestion.id}
+                id="quiz-text-input"
+                autoFocus
                 value={userAnswer}
                 onChange={e => setUserAnswer(e.target.value)}
                 placeholder="请编写代码..."
