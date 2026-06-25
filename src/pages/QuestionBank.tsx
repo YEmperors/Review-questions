@@ -18,6 +18,7 @@ import {
   deleteAllQuestionBanks, getAllQuestionCounts, getKnowledgePoints, toggleFavorite, getFavorites
 } from '../db/repositories'
 import { Question, QuestionType, QuestionBank } from '../types'
+import { exportFile } from '../utils/fileExport'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -539,34 +540,30 @@ const QuestionBankPage: React.FC = () => {
     { 题型: '简答题', 题目: '请简述光合作用的过程。', 选项: '', 答案: '植物利用光能将二氧化碳和水转化为有机物，并释放氧气。', 解析: '' },
   ]
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
       const ws = XLSX.utils.json_to_sheet(tableTemplateData)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, '题目模板')
-      XLSX.writeFile(wb, '导入模板_Excel.xlsx')
-      message.success('Excel 模板已下载')
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      await exportFile('导入模板_Excel.xlsx', new Uint8Array(excelBuffer), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     } catch (err) {
       message.error('导出失败')
     }
   }
 
-  const handleExportCsv = () => {
+  const handleExportCsv = async () => {
     try {
       const ws = XLSX.utils.json_to_sheet(tableTemplateData)
       const csv = XLSX.utils.sheet_to_csv(ws)
-      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      link.download = '导入模板_CSV.csv'
-      link.click()
-      message.success('CSV 模板已下载')
+      const buffer = new TextEncoder().encode('\ufeff' + csv)
+      await exportFile('导入模板_CSV.csv', buffer, 'text/csv;charset=utf-8;')
     } catch (err) {
       message.error('导出失败')
     }
   }
 
-  const handleExportTxt = () => {
+  const handleExportTxt = async () => {
     try {
       const txtContent = `1. 【单选题】1+1等于几？
 A. 1
@@ -594,12 +591,8 @@ D. 黄瓜
 5. 请简述光合作用的过程。
 题型：简答题
 答案：植物利用光能将二氧化碳和水转化为有机物，并释放氧气。`
-      const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' })
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      link.download = '导入模板_TXT.txt'
-      link.click()
-      message.success('TXT 模板已下载')
+      const buffer = new TextEncoder().encode(txtContent)
+      await exportFile('导入模板_TXT.txt', buffer, 'text/plain;charset=utf-8;')
     } catch (err) {
       message.error('导出失败')
     }
@@ -642,11 +635,8 @@ D. 黄瓜
         }]
       })
       const blob = await Packer.toBlob(doc)
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      link.download = '导入模板_Word.docx'
-      link.click()
-      message.success('Word 模板已下载')
+      const buffer = await blob.arrayBuffer()
+      await exportFile('导入模板_Word.docx', new Uint8Array(buffer), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     } catch (err) {
       message.error('导出 Word 失败')
     }
@@ -701,8 +691,8 @@ D. 黄瓜
                 </Tag>
                 <span className="bank-tag-action">
                   <Popconfirm
-                    title="清空全部题库？"
-                    description={`将删除全部 ${banks.length} 个题库及所有 ${bankCounts[0] ?? 0} 道题目，此操作不可恢复！`}
+                    title={`删除全部 ${bankCounts[0] ?? 0} 道题目？`}
+                    description={`将清空全部 ${banks.length} 个题库内的所有 ${bankCounts[0] ?? 0} 道题目，此操作不可恢复！`}
                     okText="确认清空"
                     okButtonProps={{ danger: true }}
                     cancelText="取消"
@@ -715,7 +705,7 @@ D. 黄瓜
                       danger
                       icon={<DeleteOutlined />}
                       disabled={(bankCounts[0] ?? 0) === 0 && banks.length === 0}
-                      title="清空全部题库"
+                      title={`删除全部 ${bankCounts[0] ?? 0} 道题目`}
                     />
                   </Popconfirm>
                 </span>

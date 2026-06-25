@@ -11,6 +11,7 @@ import {
 import * as XLSX from 'xlsx'
 import { updateAISettings, getAISettings, setStudyGoal, getStudyGoal, exportAllQuestions, exportAllQuizRecords, createQuestionsBatch, getQuestionBanks, createQuestionBank } from '../db/repositories'
 import dbManager from '../db'
+import { exportFile } from '../utils/fileExport'
 
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
@@ -154,7 +155,7 @@ const Settings: React.FC = () => {
     }
   }
 
-  const handleExportQuestions = () => {
+  const handleExportQuestions = async () => {
     try {
       const questions = exportAllQuestions()
       const data = questions.map(q => ({
@@ -164,28 +165,25 @@ const Settings: React.FC = () => {
         选项: q.options ? JSON.parse(q.options).join('\n') : '',
         答案: q.answer,
         解析: q.analysis || '',
-        
-        
         标签: q.tags ? JSON.parse(q.tags).join(',') : ''
       }))
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, '题目')
-      XLSX.writeFile(wb, '题目导出.xlsx')
-      message.success(`成功导出 ${data.length} 道题目`)
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      await exportFile('题目导出.xlsx', new Uint8Array(excelBuffer), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     } catch (err: any) {
       message.error('导出失败：' + err.message)
     }
   }
 
-  const handleExportRecords = () => {
+  const handleExportRecords = async () => {
     try {
       const records = exportAllQuizRecords()
       const data = records.map((r: any) => ({
         ID: r.id,
         题目: r.question_content,
         题型: r.question_type,
-        
         我的答案: r.user_answer,
         是否正确: r.is_correct === 1 ? '正确' : r.is_correct === 2 ? '待评阅' : '错误',
         用时_秒: r.time_spent,
@@ -195,8 +193,8 @@ const Settings: React.FC = () => {
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, '答题记录')
-      XLSX.writeFile(wb, '答题记录导出.xlsx')
-      message.success(`成功导出 ${data.length} 条记录`)
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      await exportFile('答题记录导出.xlsx', new Uint8Array(excelBuffer), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     } catch (err: any) {
       message.error('导出失败：' + err.message)
     }
