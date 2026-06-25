@@ -19,6 +19,8 @@ import {
 } from '../db/repositories'
 import { Question, QuestionType, QuestionBank } from '../types'
 import { exportFile } from '../utils/fileExport'
+import { listen } from '@tauri-apps/api/event'
+import { readBinaryFile } from '@tauri-apps/api/fs'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -93,6 +95,61 @@ const QuestionBankPage: React.FC = () => {
       setSelectedRowKeys(prev => prev.filter(key => currentIds.has(key as number)))
     }
   }, [questions])
+
+  // Tauri 原生文件拖拽支持
+  useEffect(() => {
+    let unlistenHover: () => void
+    let unlistenDrop: () => void
+    let unlistenCancel: () => void
+
+    const setupTauriDragDrop = async () => {
+      if (!(window as any).__TAURI__) return
+
+      unlistenHover = await listen('tauri://file-drop-hover', () => {
+        setIsDragging(true)
+      })
+
+      unlistenCancel = await listen('tauri://file-drop-cancelled', () => {
+        setIsDragging(false)
+      })
+
+      unlistenDrop = await listen('tauri://file-drop', async (event: any) => {
+        setIsDragging(false)
+        const paths = event.payload as string[]
+        if (paths && paths.length > 0) {
+          const path = paths[0]
+          const isSupported = /\.(xlsx|xls|csv|json|txt|docx)$/i.test(path)
+          if (isSupported) {
+            try {
+              // 提取文件名
+              const filename = path.split('\\').pop()?.split('/').pop() || 'file'
+              // 读取二进制数据
+              const uint8Array = await readBinaryFile(path)
+              // 构造 DOM File 对象以便兼容现有的导入逻辑
+              const file = new File([uint8Array], filename)
+              // 如果没有选择题库，使用默认题库1
+              const currentSelectedBank = selectedBank ?? (banks[0]?.id ?? 1)
+              setImportBankId(currentSelectedBank)
+              handleImport(file, currentSelectedBank)
+            } catch (err: any) {
+              message.error('读取文件失败: ' + err.message)
+            }
+          } else {
+            message.error('不支持的文件格式，请上传 Word, Excel, CSV, JSON 或 TXT 文件')
+          }
+        }
+      })
+    }
+
+    setupTauriDragDrop()
+
+    return () => {
+      if (unlistenHover) unlistenHover()
+      if (unlistenDrop) unlistenDrop()
+      if (unlistenCancel) unlistenCancel()
+    }
+  }, [selectedBank, banks]) // 依赖 selectedBank 保证导入到正确的题库
+
 
   // ==================== 题库分类管理 ====================
   const handleAddBank = () => {
@@ -403,7 +460,8 @@ const QuestionBankPage: React.FC = () => {
   }
 
   // ==================== 文件导入 ====================
-  const handleImport = async (file: File) => {
+  const handleImport = async (file: File, targetBankId?: number) => {
+    const finalBankId = targetBankId ?? importBankId
     const reader = new FileReader()
 
     reader.onload = async (e) => {
@@ -417,13 +475,13 @@ const QuestionBankPage: React.FC = () => {
           try {
             const result = await mammoth.extractRawText({ arrayBuffer: data as ArrayBuffer })
             const text = result.value
-            questionsToInsert = parseTxtQuestions(text).map(q => ({ ...q, bank_id: importBankId }))
+            questionsToInsert = parseTxtQuestions(text).map(q => ({ ...q, bank_id: finalBankId }))
           } catch (err) {
             message.error('Word文档解析失败')
             return
           }
         } else if (file.name.endsWith('.txt')) {
-          questionsToInsert = parseTxtQuestions(data as string).map(q => ({ ...q, bank_id: importBankId }))
+          questionsToInsert = parseTxtQuestions(data as string).map(q => ({ ...q, bank_id: finalBankId }))
         } else {
           let jsonData: any[]
           if (file.name.endsWith('.json')) {
@@ -487,7 +545,7 @@ const QuestionBankPage: React.FC = () => {
               answer: answer,
               analysis: row.analysis || row.解析 || null,
               tags: null,
-              bank_id: importBankId
+              bank_id: finalBankId
             }
           }).filter((q: any) => q.content)
         }
@@ -702,8 +760,9 @@ D. 黄瓜
       const file = e.dataTransfer.files[0]
       const isSupported = /\.(xlsx|xls|csv|json|txt|docx)$/i.test(file.name)
       if (isSupported) {
-        setImportBankId(selectedBank ?? (banks[0]?.id ?? 1))
-        handleImport(file)
+        const currentSelectedBank = selectedBank ?? (banks[0]?.id ?? 1)
+        setImportBankId(currentSelectedBank)
+        handleImport(file, currentSelectedBank)
       } else {
         message.error('不支持的文件格式，请上传 Word, Excel, CSV, JSON 或 TXT 文件')
       }

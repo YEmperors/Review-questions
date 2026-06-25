@@ -1,7 +1,7 @@
 {
   "name": "smart-quiz-app",
   "private": true,
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "智能刷题程序 - Tauri桌面应用",
   "scripts": {
     "dev": "vite",

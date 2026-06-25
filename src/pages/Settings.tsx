@@ -21,6 +21,7 @@ const Settings: React.FC = () => {
   const [goalForm] = Form.useForm()
   const [saved, setSaved] = useState(false)
   const [dbPath, setDbPath] = useState<string>('浏览器缓存 (网页端)')
+  const [dbHistory, setDbHistory] = useState<string[]>([])
 
   useEffect(() => {
     loadSettings()
@@ -31,11 +32,58 @@ const Settings: React.FC = () => {
     if ((window as any).__TAURI__) {
       try {
         const custom = localStorage.getItem('APP_DB_DIR')
-        const dir = custom || await appDataDir()
+        const defaultDir = await appDataDir()
+        const dir = custom || defaultDir
         const path = await join(dir, 'smart-quiz.db')
         setDbPath(path)
+        
+        let history: string[] = []
+        try {
+          const storedHistory = localStorage.getItem('APP_DB_DIR_HISTORY')
+          if (storedHistory) {
+            history = JSON.parse(storedHistory)
+          }
+        } catch (e) {}
+
+        if (!history.includes(defaultDir)) {
+          history = [defaultDir, ...history]
+        }
+        if (custom && !history.includes(custom)) {
+          history = [custom, ...history]
+        }
+        setDbHistory(history)
       } catch (e) { }
     }
+  }
+
+  const switchDatabaseDir = async (newDir: string | null) => {
+    await dbManager.saveNow() // 首先确保当前数据已保存
+    
+    if (newDir) {
+      localStorage.setItem('APP_DB_DIR', newDir)
+      
+      let history: string[] = []
+      try {
+        const storedHistory = localStorage.getItem('APP_DB_DIR_HISTORY')
+        if (storedHistory) history = JSON.parse(storedHistory)
+      } catch (e) {}
+      
+      if (!history.includes(newDir)) {
+        history = [newDir, ...history]
+        localStorage.setItem('APP_DB_DIR_HISTORY', JSON.stringify(history))
+      }
+    } else {
+      localStorage.removeItem('APP_DB_DIR')
+    }
+    
+    message.success('存储位置已切换，即将重启应用加载新数据', 1.5).then(() => {
+      window.location.reload()
+    })
+  }
+
+  const handleRestoreDefaultDbPath = async () => {
+    if (!(window as any).__TAURI__) return
+    await switchDatabaseDir(null)
   }
 
   const handleChangeDbPath = async () => {
@@ -51,14 +99,7 @@ const Settings: React.FC = () => {
         title: '选择新的数据保存位置'
       })
       if (selected && typeof selected === 'string') {
-        localStorage.setItem('APP_DB_DIR', selected)
-        await loadDbPath()
-        const success = await dbManager.saveNow()
-        if (success) {
-          message.success('数据库存储位置已成功转移，新数据将写入此位置')
-        } else {
-          message.error('尝试写入新位置失败')
-        }
+        await switchDatabaseDir(selected)
       }
     } catch (e) {
       console.error(e)
@@ -294,11 +335,31 @@ const Settings: React.FC = () => {
                       数据存储在本地 SQLite 数据库中，自动每 3 秒保存一次。
                     </Text>
                     <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                      <Text copyable style={{ color: '#e2e8f0', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: 6, display: 'inline-block', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {dbPath}
-                      </Text>
+                      {!!(window as any).__TAURI__ ? (
+                        <Select 
+                          value={dbPath} 
+                          style={{ flex: 1 }}
+                          onChange={async (value) => {
+                            const dirPath = value.replace(/[\\/]?smart-quiz\.db$/, '')
+                            await switchDatabaseDir(dirPath)
+                          }}
+                        >
+                          {dbHistory.map(dir => {
+                            const p = dir + (dir.endsWith('\\') || dir.endsWith('/') ? '' : '\\') + 'smart-quiz.db'
+                            return <Option key={dir} value={p}>{p}</Option>
+                          })}
+                        </Select>
+                      ) : (
+                        <Text copyable style={{ color: '#e2e8f0', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: 6, display: 'inline-block', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {dbPath}
+                        </Text>
+                      )}
+                      
                       {!!(window as any).__TAURI__ && (
-                        <Button onClick={handleChangeDbPath}>转移存储位置</Button>
+                        <Space>
+                          <Button onClick={handleChangeDbPath}>添加新目录</Button>
+                          <Button danger onClick={handleRestoreDefaultDbPath}>恢复默认路径</Button>
+                        </Space>
                       )}
                     </div>
                   </Form.Item>
