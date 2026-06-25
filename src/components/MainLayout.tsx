@@ -119,24 +119,26 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             const hasWrong = item.key === '/wrong-book' && wrongCount > 0
             return {
               key: item.key,
-              title: collapsed ? undefined : '', // 折叠时恢复默认悬浮提示，展开时禁用
+              title: '', // 强制禁用 Menu 自带的所有原生气泡和不可控气泡
               icon: (
-                <span style={{ fontSize: 16, position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                  {item.icon}
-                  {hasWrong && collapsed && (
-                    <span style={{
-                      position: 'absolute',
-                      top: -2,
-                      right: -4,
-                      width: 6,
-                      height: 6,
-                      backgroundColor: '#ef4444',
-                      borderRadius: '50%',
-                    }} />
-                  )}
-                </span>
+                <Tooltip title={collapsed ? item.label : ''} placement="right" mouseEnterDelay={0.1}>
+                  <span style={{ fontSize: 16, position: 'relative', display: 'inline-flex', alignItems: 'center', width: '100%', height: '100%', justifyContent: 'center' }}>
+                    {item.icon}
+                    {hasWrong && collapsed && (
+                      <span style={{
+                        position: 'absolute',
+                        top: -2,
+                        right: -4,
+                        width: 6,
+                        height: 6,
+                        backgroundColor: '#ef4444',
+                        borderRadius: '50%',
+                      }} />
+                    )}
+                  </span>
+                </Tooltip>
               ),
-              label: collapsed ? null : (
+              label: (
                 <span style={{ fontWeight: location.pathname === item.key ? 600 : 400 }}>
                   {hasWrong && !collapsed ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingRight: 8 }}>
