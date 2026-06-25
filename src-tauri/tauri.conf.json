@@ -8,18 +8,19 @@
   },
   "package": {
     "productName": "smart-quiz-app",
-    "version": "0.1.4"
+    "version": "0.1.5"
   },
   "tauri": {
     "allowlist": {
       "all": false,
       "fs": {
         "all": true,
-        "scope": [
-          "$APPDATA/**"
-        ]
+        "scope": ["**"]
       },
       "path": {
+        "all": true
+      },
+      "dialog": {
         "all": true
       }
     },
