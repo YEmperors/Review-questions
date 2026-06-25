@@ -126,7 +126,7 @@ const QuestionBankPage: React.FC = () => {
               // 读取二进制数据
               const uint8Array = await readBinaryFile(path)
               // 构造 DOM File 对象以便兼容现有的导入逻辑
-              const file = new File([uint8Array], filename)
+              const file = new File([uint8Array as any], filename)
               // 如果没有选择题库，使用默认题库1
               const currentSelectedBank = selectedBank ?? (banks[0]?.id ?? 1)
               setImportBankId(currentSelectedBank)
@@ -1094,7 +1094,7 @@ C.选项三  D.选项四
             <div style={{ fontSize: 12, color: '#555', marginBottom: 4, fontWeight: 500 }}>上传文件</div>
             <Upload.Dragger
               accept=".xlsx,.xls,.csv,.json,.txt,.docx"
-              beforeUpload={handleImport}
+              beforeUpload={(file) => { handleImport(file as File); return false }}
               showUploadList={false}
               style={{ borderRadius: 8 }}
               height={160}
