@@ -263,6 +263,12 @@ export function createQuizRecord(record: Omit<QuizRecord, 'id' | 'created_at'>):
   dbManager.markDirty()
 }
 
+export function deleteQuizRecord(id: number): void {
+  const db = dbManager.getDb()
+  db.run('DELETE FROM quiz_records WHERE id = ?', [id])
+  dbManager.markDirty()
+}
+
 export function getQuizRecords(questionId?: number, limit?: number): QuizRecord[] {
   if (questionId !== undefined) {
     return selectAll<QuizRecord>('SELECT * FROM quiz_records WHERE question_id = ? ORDER BY created_at DESC', [questionId])

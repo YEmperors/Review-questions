@@ -13,7 +13,7 @@ import {
 } from 'recharts'
 import {
   getKnowledgePointStats, getDueReviewQuestions, getQuestionsByIds,
-  getWrongQuestionsWithQuestions
+  getWrongQuestionsWithQuestions, deleteQuizRecord
 } from '../db/repositories'
 import { Question, QuizRecord } from '../types'
 import { useNavigate } from 'react-router-dom'
@@ -55,6 +55,20 @@ const WrongBook: React.FC = () => {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const handleDeleteRecord = (id: number) => {
+    Modal.confirm({
+      title: '确认移除该错题？',
+      content: '移除后将不再出现在错题本中（原题库题目不受影响）。',
+      okText: '确认移除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: () => {
+        deleteQuizRecord(id)
+        loadData()
+      }
+    })
+  }
 
   const handleReviewWrong = () => {
     if (wrongRecords.length === 0) return
@@ -112,16 +126,27 @@ const WrongBook: React.FC = () => {
       )
     },
     {
-      title: '操作', width: 80,
+      title: '操作', width: 120,
       render: (_: any, record: QuizRecord & { question: Question }) => (
-        <Button
-          type="link"
-          size="small"
-          onClick={() => { setSelectedRecord(record); setDetailVisible(true) }}
-          style={{ color: '#6366f1', padding: 0 }}
-        >
-          详情
-        </Button>
+        <Space size="middle">
+          <Button
+            type="link"
+            size="small"
+            onClick={() => { setSelectedRecord(record); setDetailVisible(true) }}
+            style={{ color: '#6366f1', padding: 0 }}
+          >
+            详情
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            danger
+            onClick={() => handleDeleteRecord(record.id)}
+            style={{ padding: 0 }}
+          >
+            移除
+          </Button>
+        </Space>
       )
     }
   ]

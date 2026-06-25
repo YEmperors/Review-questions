@@ -119,10 +119,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             const hasWrong = item.key === '/wrong-book' && wrongCount > 0
             return {
               key: item.key,
-              title: '', // 禁用鼠标悬浮时的原生提示气泡
+              title: collapsed ? undefined : '', // 折叠时恢复默认悬浮提示，展开时禁用
               icon: (
-                <span style={{ fontSize: 16 }}>
+                <span style={{ fontSize: 16, position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                   {item.icon}
+                  {hasWrong && collapsed && (
+                    <span style={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -4,
+                      width: 6,
+                      height: 6,
+                      backgroundColor: '#ef4444',
+                      borderRadius: '50%',
+                    }} />
+                  )}
                 </span>
               ),
               label: collapsed ? null : (
