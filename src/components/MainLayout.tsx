@@ -52,6 +52,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <Layout style={{ minHeight: '100vh', background: '#0f0f14' }}>
       <Sider
+        breakpoint="lg"
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
@@ -200,7 +201,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </Sider>
 
       <Layout style={{ background: 'transparent' }}>
-        <Content style={{
+        <Content className="responsive-content-padding" style={{
           margin: 0,
           padding: '24px 28px',
           overflow: 'auto',

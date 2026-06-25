@@ -108,9 +108,9 @@ const Dashboard: React.FC = () => {
     return (
       <div>
         <Skeleton active paragraph={{ rows: 1 }} style={{ marginBottom: 24 }} />
-        <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           {[1,2,3,4].map(i => (
-            <Col span={6} key={i}>
+            <Col xs={24} sm={12} md={12} lg={6} key={i}>
               <Card><Skeleton active paragraph={{ rows: 1 }} /></Card>
             </Col>
           ))}
@@ -202,7 +202,7 @@ const Dashboard: React.FC = () => {
         }}
         bodyStyle={{ padding: '16px 20px' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
               width: 44, height: 44, borderRadius: 12,
@@ -236,7 +236,7 @@ const Dashboard: React.FC = () => {
       {/* 统计卡片 */}
       <div className="animate-delay-2 animate-float-up" style={{ animationFillMode: 'both' }}>
       <Row gutter={[16, 16]} style={{ marginBottom: 20, display: 'flex' }}>
-        <Col span={6} style={{ display: 'flex' }}>
+        <Col xs={24} sm={12} md={12} lg={6} style={{ display: 'flex' }}>
           <StatCard
             title="题库总量"
             value={stats.totalQuestions}
@@ -246,7 +246,7 @@ const Dashboard: React.FC = () => {
             bgColor="rgba(99,102,241,0.08)"
           />
         </Col>
-        <Col span={6} style={{ display: 'flex' }}>
+        <Col xs={24} sm={12} md={12} lg={6} style={{ display: 'flex' }}>
           <StatCard
             title="已答题目"
             value={stats.answeredQuestions}
@@ -257,7 +257,7 @@ const Dashboard: React.FC = () => {
             trend={`正确率 ${accuracy}%`}
           />
         </Col>
-        <Col span={6} style={{ display: 'flex' }}>
+        <Col xs={24} sm={12} md={12} lg={6} style={{ display: 'flex' }}>
           <StatCard
             title="今日答题"
             value={stats.todayCount}
@@ -267,7 +267,7 @@ const Dashboard: React.FC = () => {
             bgColor="rgba(245,158,11,0.08)"
           />
         </Col>
-        <Col span={6} style={{ display: 'flex' }}>
+        <Col xs={24} sm={12} md={12} lg={6} style={{ display: 'flex' }}>
           <StatCard
             title="连续学习"
             value={stats.streakDays}

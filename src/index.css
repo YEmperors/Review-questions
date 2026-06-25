@@ -80,3 +80,10 @@
   margin-left: 2px;
   pointer-events: auto;
 }
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .responsive-content-padding {
+    padding: 16px 12px !important;
+  }
+}

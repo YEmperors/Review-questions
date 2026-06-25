@@ -137,7 +137,7 @@ const QuizSetup: React.FC = () => {
             <Radio.Group style={{ width: '100%' }}>
               <Row gutter={12}>
                 {modeConfig.map(cfg => (
-                  <Col span={12} key={cfg.value} style={{ marginBottom: 12 }}>
+                  <Col xs={24} sm={12} key={cfg.value} style={{ marginBottom: 12 }}>
                     <Radio
                       value={cfg.value}
                       style={{ display: 'block', width: '100%', margin: 0 }}
@@ -192,7 +192,7 @@ const QuizSetup: React.FC = () => {
             </Text>
 
             <Row gutter={16}>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <Form.Item name="bankId" label={<span style={{ color: '#94a3b8' }}>题库</span>} style={{ marginBottom: 16 }}>
                   <Select
                     allowClear
@@ -209,7 +209,7 @@ const QuizSetup: React.FC = () => {
             </Row>
 
             <Row gutter={16}>
-              <Col span={8}>
+              <Col xs={12} md={8}>
                 <Form.Item name="questionCount" label={<span style={{ color: '#94a3b8' }}>题目数量</span>} style={{ marginBottom: 16 }}>
                   <InputNumber
                     min={1} max={200} style={{ width: '100%', borderRadius: 8 }}
@@ -217,7 +217,7 @@ const QuizSetup: React.FC = () => {
                   />
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col xs={12} md={8}>
                 <Form.Item name="timeLimit" label={<span style={{ color: '#94a3b8' }}>时限（分钟）</span>} style={{ marginBottom: 16 }}>
                   <InputNumber
                     min={1} max={300} style={{ width: '100%', borderRadius: 8 }}

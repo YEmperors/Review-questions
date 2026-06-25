@@ -277,7 +277,7 @@ const QuizPage: React.FC = () => {
         }}
         bodyStyle={{ padding: '12px 20px' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
           <Space size={12}>
             <Button
               type="text"
@@ -496,7 +496,7 @@ const QuizPage: React.FC = () => {
               />
             )}
 
-            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginTop: 24, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
               <Text style={{ fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <KeyOutlined />
                 {currentQuestion.type === 'single' || currentQuestion.type === 'judge'
@@ -621,7 +621,7 @@ const QuizPage: React.FC = () => {
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
               <Text style={{ fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <KeyOutlined />
                 {isFinished ? '' : 'Enter / → / N 下一题'}

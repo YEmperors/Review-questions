@@ -681,8 +681,8 @@ D. 黄瓜
     <div>
       <Title level={3}>📚 题库管理</Title>
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={16}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={16}>
           <Card size="small" title="题库分类">
             <Space wrap>
               <span className="bank-tag-item">
@@ -744,7 +744,7 @@ D. 黄瓜
             </Space>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={24} lg={8}>
           <Card size="small" title="导入导出">
             <Space>
               <Button icon={<UploadOutlined />} onClick={() => {
@@ -761,7 +761,8 @@ D. 黄瓜
 
       {/* 筛选栏 */}
       <Card size="small" style={{ marginBottom: 16 }}>
-        <Space>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+          <Space>
           <Text>题型：</Text>
           <Select
             value={filterType}
@@ -778,7 +779,9 @@ D. 黄瓜
             <Option value="coding">编程题</Option>
           </Select>
 
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          </Space>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {selectedRowKeys.length > 0 && (
               <>
                 <Button type="primary" style={{ background: '#10b981', borderColor: '#10b981' }} icon={<PlayCircleOutlined />} onClick={handlePracticeSelected}>
@@ -793,7 +796,7 @@ D. 黄瓜
               添加题目
             </Button>
           </div>
-        </Space>
+        </div>
       </Card>
 
       {/* 题目列表 */}
