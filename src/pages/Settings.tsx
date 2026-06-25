@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { appDataDir, join } from '@tauri-apps/api/path'
 import {
   Card, Form, Input, InputNumber, Select, Slider, Button, Space, Typography,
   message, Divider, Alert, Tabs
@@ -26,11 +27,11 @@ const Settings: React.FC = () => {
   }, [])
 
   const loadDbPath = async () => {
-    const electronAPI = (window as any).electronAPI
-    if (electronAPI && electronAPI.dbGetPath) {
+    if ((window as any).__TAURI__) {
       try {
-        const path = await electronAPI.dbGetPath()
-        if (path) setDbPath(path)
+        const dir = await appDataDir()
+        const path = await join(dir, 'smart-quiz.db')
+        setDbPath(path)
       } catch (e) { }
     }
   }

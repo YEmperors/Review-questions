@@ -1,46 +1,26 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import electron from 'vite-plugin-electron'
-import renderer from 'vite-plugin-electron-renderer'
 import path from 'path'
 
 export default defineConfig({
   base: './',
   plugins: [
-    react(),
-    electron([
-      {
-        // Main process entry
-        entry: 'electron/main.ts',
-        vite: {
-          build: {
-            outDir: 'dist-electron',
-            rollupOptions: {
-              external: ['sql.js']
-            }
-          }
-        }
-      },
-      {
-        // Preload script
-        entry: 'electron/preload.ts',
-        onstart(args) {
-          args.reload()
-        },
-        vite: {
-          build: {
-            outDir: 'dist-electron'
-          }
-        }
-      }
-    ]),
-    renderer()
+    react()
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')
     }
   },
+  
+  // Tauri specifics
+  clearScreen: false,
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
+  envPrefix: ['VITE_', 'TAURI_'],
+  
   build: {
     chunkSizeWarningLimit: 1500,
     rollupOptions: {

@@ -1,5 +1,45 @@
 import initSqlJs, { Database } from 'sql.js'
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url'
+import { readBinaryFile, writeBinaryFile, exists, BaseDirectory, createDir } from '@tauri-apps/api/fs'
+import { appDataDir, join } from '@tauri-apps/api/path'
+
+const isTauri = !!(window as any).__TAURI__
+
+async function getTauriDbPath() {
+  const dir = await appDataDir()
+  return await join(dir, 'smart-quiz.db')
+}
+
+async function getTauriDbData(): Promise<Uint8Array | null> {
+  try {
+    const dir = await appDataDir()
+    if (!(await exists(dir))) {
+      await createDir(dir, { recursive: true })
+    }
+    const path = await getTauriDbPath()
+    if (await exists(path)) {
+      return await readBinaryFile(path)
+    }
+  } catch (e) {
+    console.error('Failed to read from Tauri FS:', e)
+  }
+  return null
+}
+
+async function saveTauriDbData(data: Uint8Array): Promise<boolean> {
+  try {
+    const dir = await appDataDir()
+    if (!(await exists(dir))) {
+      await createDir(dir, { recursive: true })
+    }
+    const path = await getTauriDbPath()
+    await writeBinaryFile(path, data)
+    return true
+  } catch (e) {
+    console.error('Failed to write to Tauri FS:', e)
+    return false
+  }
+}
 
 const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS question_banks (
@@ -136,16 +176,10 @@ class DatabaseManager {
       locateFile: () => wasmUrl
     })
 
-    const electronAPI = (window as any).electronAPI
     let savedData: Uint8Array | null = null
 
-    if (electronAPI) {
-      const buffer = await electronAPI.dbRead()
-      if (buffer) {
-        savedData = new Uint8Array(
-          buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
-        )
-      }
+    if (isTauri) {
+      savedData = await getTauriDbData()
     } else {
       // 纯网页端 Fallback
       savedData = await getWebDbData()
@@ -179,11 +213,10 @@ class DatabaseManager {
     this.saving = true
     try {
       const data = this.db.export()
-      const electronAPI = (window as any).electronAPI
-      if (electronAPI) {
-        const result = await electronAPI.dbWrite(Buffer.from(data))
+      if (isTauri) {
+        const result = await saveTauriDbData(data)
         this.pendingSave = false
-        return result === true
+        return result
       } else {
         // 纯网页端 Fallback
         const result = await saveWebDbData(data)
@@ -203,9 +236,8 @@ class DatabaseManager {
     if (!this.db || this.saving) return
     try {
       const data = this.db.export()
-      const electronAPI = (window as any).electronAPI
-      if (electronAPI && electronAPI.dbWriteSync) {
-        electronAPI.dbWriteSync(data.buffer)
+      if (isTauri) {
+        saveTauriDbData(data)
       } else {
         saveWebDbData(data)
       }
