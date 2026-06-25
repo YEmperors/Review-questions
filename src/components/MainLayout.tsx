@@ -122,7 +122,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               title: '', // 强制禁用 Menu 自带的所有原生气泡和不可控气泡
               icon: (
                 <Tooltip title={collapsed ? item.label : ''} placement="right" mouseEnterDelay={0.1}>
-                  <span style={{ fontSize: 16, position: 'relative', display: 'inline-flex', alignItems: 'center', width: '100%', height: '100%', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 16, position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                     {item.icon}
                     {hasWrong && collapsed && (
                       <span style={{
