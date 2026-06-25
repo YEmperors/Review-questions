@@ -76,6 +76,7 @@ const QuestionBankPage: React.FC = () => {
 
   useEffect(() => {
     loadQuestions()
+    setSelectedRowKeys([])
   }, [selectedBank, filterType])
 
   // ==================== 题库分类管理 ====================
@@ -95,13 +96,22 @@ const QuestionBankPage: React.FC = () => {
 
   const handleDeleteBank = (id: number) => {
     try {
-      deleteQuestionBank(id)
-      if (selectedBank === id) setSelectedBank(undefined)
+      if (id === 1) {
+        // 对于默认题库，只删除其中的题目，不删除题库本身
+        const qs = getQuestions({ bankId: id })
+        if (qs.length > 0) {
+          deleteQuestionsBatch(qs.map(q => q.id))
+        }
+        message.success('默认题库中的题目已清空')
+      } else {
+        deleteQuestionBank(id)
+        if (selectedBank === id) setSelectedBank(undefined)
+        message.success('题库已删除')
+      }
       loadBanks()
       loadQuestions()
-      message.success('题库已删除')
     } catch (err) {
-      message.error('删除题库失败')
+      message.error(id === 1 ? '清空题目失败' : '删除题库失败')
     }
   }
 
@@ -700,20 +710,18 @@ D. 黄瓜
                   >
                     {bank.name} ({bankCounts[bank.id] ?? 0})
                   </Tag>
-                  {bank.id !== 1 && (
-                    <span className="bank-tag-action">
-                      <Popconfirm
-                        title={`删除题库「${bank.name}」？`}
-                        description={`该题库内所有题目（含子题库题目）将一并删除，此操作不可恢复。`}
-                        okText="确认删除"
-                        okButtonProps={{ danger: true }}
-                        cancelText="取消"
-                        onConfirm={() => handleDeleteBank(bank.id)}
-                      >
-                        <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                      </Popconfirm>
-                    </span>
-                  )}
+                  <span className="bank-tag-action">
+                    <Popconfirm
+                      title={bank.id === 1 ? `清空题库「${bank.name}」？` : `删除题库「${bank.name}」？`}
+                      description={bank.id === 1 ? `将清空该题库内的所有题目，但题库本身会保留，此操作不可恢复。` : `该题库内所有题目（含子题库题目）将一并删除，此操作不可恢复。`}
+                      okText={bank.id === 1 ? "确认清空" : "确认删除"}
+                      okButtonProps={{ danger: true }}
+                      cancelText="取消"
+                      onConfirm={() => handleDeleteBank(bank.id)}
+                    >
+                      <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  </span>
                 </span>
               ))}
               <Button type="dashed" size="small" icon={<PlusOutlined />}
