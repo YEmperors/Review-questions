@@ -52,6 +52,8 @@ const QuestionBankPage: React.FC = () => {
   const [favSet, setFavSet] = useState<Set<number>>(new Set())
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [importBankId, setImportBankId] = useState<number>(1)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragCounter = React.useRef(0)
 
   const refreshFavorites = () => {
     setFavSet(new Set(getFavorites()))
@@ -672,8 +674,67 @@ D. 黄瓜
     }
   ]
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounter.current++
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounter.current--
+    if (dragCounter.current === 0) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounter.current = 0
+    setIsDragging(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0]
+      const isSupported = /\.(xlsx|xls|csv|json|txt|docx)$/i.test(file.name)
+      if (isSupported) {
+        setImportBankId(selectedBank ?? (banks[0]?.id ?? 1))
+        handleImport(file)
+      } else {
+        message.error('不支持的文件格式，请上传 Word, Excel, CSV, JSON 或 TXT 文件')
+      }
+    }
+  }
+
   return (
-    <div>
+    <div 
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver} 
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{ minHeight: '100%', position: 'relative' }}
+    >
+      {isDragging && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(22, 119, 255, 0.1)',
+          border: '2px dashed #1677ff',
+          borderRadius: 8,
+          zIndex: 999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none'
+        }}>
+          <div style={{ textAlign: 'center', color: '#1677ff' }}>
+            <DatabaseOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+            <Title level={4} style={{ color: '#1677ff', margin: 0 }}>松开鼠标立即导入题库</Title>
+            <Text style={{ color: '#1677ff' }}>当前将导入至：{selectedBank ? banks.find(b => b.id === selectedBank)?.name : '默认题库'}</Text>
+          </div>
+        </div>
+      )}
       <Title level={3}>📚 题库管理</Title>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
