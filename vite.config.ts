@@ -42,11 +42,13 @@ export default defineConfig({
     }
   },
   build: {
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom', 'zustand'],
           ui: ['antd', '@ant-design/icons', 'recharts'],
+          parsers: ['docx', 'mammoth'],
           utils: ['xlsx', 'dayjs', 'uuid', 'sql.js']
         }
       }
