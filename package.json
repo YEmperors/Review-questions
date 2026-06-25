@@ -12,6 +12,7 @@
   "build": {
     "appId": "com.smartquiz.app",
     "compression": "maximum",
+    "electronLanguages": ["zh-CN"],
     "directories": {
       "output": "release"
     },
