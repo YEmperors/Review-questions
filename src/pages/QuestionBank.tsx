@@ -343,8 +343,10 @@ const QuestionBankPage: React.FC = () => {
           type = QuestionType.JUDGE
         } else if (content.includes('___') || content.includes('____') || content.includes('（　）') || content.includes('( )') || content.includes('()') || content.includes('__')) {
           type = QuestionType.FILL
+        } else if (answer.trim().length > 0) {
+          type = QuestionType.FILL
         } else {
-          // 无选项，且不符合判断、填空特征，默认归为简答/问答题
+          // 无选项且无答案，归为简答/问答题
           type = QuestionType.SHORT_ANSWER
         }
       }
@@ -438,6 +440,8 @@ const QuestionBankPage: React.FC = () => {
               if (['对', '错', '正确', '错误', 'true', 'false', '是', '否', '✓', '✗'].includes(lowerAns)) {
                 inferredType = QuestionType.JUDGE
               } else if (content.includes('___') || content.includes('____') || content.includes('（　）') || content.includes('( )') || content.includes('()') || content.includes('__')) {
+                inferredType = QuestionType.FILL
+              } else if (answer.trim().length > 0) {
                 inferredType = QuestionType.FILL
               } else {
                 inferredType = QuestionType.SHORT_ANSWER

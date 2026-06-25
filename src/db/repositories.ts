@@ -270,7 +270,6 @@ export function getQuizRecords(questionId?: number, limit?: number): QuizRecord[
   return selectAll<QuizRecord>('SELECT * FROM quiz_records ORDER BY created_at DESC LIMIT ?', [limit || 1000])
 }
 
-/** 获取所有错题（JOIN 查询，避免 N+1） */
 export function getWrongQuestionsWithQuestions(knowledgePoint?: string): (QuizRecord & { question: Question })[] {
   let sql = `
     SELECT r.*, q.type as q_type, q.content as q_content, q.options as q_options,
@@ -279,7 +278,10 @@ export function getWrongQuestionsWithQuestions(knowledgePoint?: string): (QuizRe
            q.created_at as q_created_at
     FROM quiz_records r
     JOIN questions q ON r.question_id = q.id
-    WHERE r.is_correct = 0
+    WHERE r.id IN (
+      SELECT MAX(id) FROM quiz_records GROUP BY question_id
+    )
+    AND r.is_correct = 0
   `
   const params: any[] = []
 
@@ -292,33 +294,28 @@ export function getWrongQuestionsWithQuestions(knowledgePoint?: string): (QuizRe
 
   const rows = selectAll<any>(sql, params)
 
-  // 去重：同一道题只显示最新的错题记录
-  const seen = new Set<number>()
   const unique: (QuizRecord & { question: Question })[] = []
   for (const r of rows) {
-    if (!seen.has(r.question_id)) {
-      seen.add(r.question_id)
-      unique.push({
-        id: r.id,
-        question_id: r.question_id,
-        user_answer: r.user_answer,
-        is_correct: r.is_correct,
-        time_spent: r.time_spent,
-        quiz_mode: r.quiz_mode,
-        created_at: r.created_at,
-        question: {
-          id: r.question_id,
-          type: r.q_type,
-          content: r.q_content,
-          options: r.q_options,
-          answer: r.q_answer,
-          analysis: r.q_analysis,
-          tags: r.q_tags,
-          bank_id: r.q_bank_id,
-          created_at: r.q_created_at
-        }
-      })
-    }
+    unique.push({
+      id: r.id,
+      question_id: r.question_id,
+      user_answer: r.user_answer,
+      is_correct: r.is_correct,
+      time_spent: r.time_spent,
+      quiz_mode: r.quiz_mode,
+      created_at: r.created_at,
+      question: {
+        id: r.question_id,
+        type: r.q_type,
+        content: r.q_content,
+        options: r.q_options,
+        answer: r.q_answer,
+        analysis: r.q_analysis,
+        tags: r.q_tags,
+        bank_id: r.q_bank_id,
+        created_at: r.q_created_at
+      }
+    })
   }
 
   return unique

@@ -13,7 +13,7 @@ import {
   BulbOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { getDueReviewQuestions } from '../db/repositories'
+import { getWrongQuestionsWithQuestions } from '../db/repositories'
 
 const { Sider, Content } = Layout
 const { Text } = Typography
@@ -36,10 +36,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
-  const [dueCount, setDueCount] = useState(0)
+  const [wrongCount, setWrongCount] = useState(0)
 
   useEffect(() => {
-    setDueCount(getDueReviewQuestions().length)
+    setWrongCount(getWrongQuestionsWithQuestions().length)
   }, [location.pathname])
 
   const siderStyle: React.CSSProperties = {
@@ -115,13 +115,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             gap: 4,
           }}
           items={menuItems.map(item => {
-            const isDue = item.key === '/wrong-book' && dueCount > 0
+            const hasWrong = item.key === '/wrong-book' && wrongCount > 0
             return {
               key: item.key,
               icon: (
                 <span style={{ fontSize: 16 }}>
-                  {isDue ? (
-                    <Badge count={dueCount} size="small" offset={[4, -2]}>
+                  {hasWrong && collapsed ? (
+                    <Badge count={wrongCount} size="small" offset={[4, -2]}>
                       {item.icon}
                     </Badge>
                   ) : item.icon}
@@ -129,10 +129,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               ),
               label: collapsed ? null : (
                 <span style={{ fontWeight: location.pathname === item.key ? 600 : 400 }}>
-                  {isDue ? (
+                  {hasWrong && !collapsed ? (
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {item.label}
-                      <Badge count={dueCount} size="small" />
+                      <Badge count={wrongCount} size="small" />
                     </span>
                   ) : item.label}
                 </span>
