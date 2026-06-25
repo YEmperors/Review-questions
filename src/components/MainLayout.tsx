@@ -119,6 +119,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             const hasWrong = item.key === '/wrong-book' && wrongCount > 0
             return {
               key: item.key,
+              title: '', // 禁用鼠标悬浮时的原生提示气泡
               icon: (
                 <span style={{ fontSize: 16 }}>
                   {item.icon}
