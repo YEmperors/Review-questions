@@ -29,10 +29,39 @@ const Settings: React.FC = () => {
   const loadDbPath = async () => {
     if ((window as any).__TAURI__) {
       try {
-        const dir = await appDataDir()
+        const custom = localStorage.getItem('APP_DB_DIR')
+        const dir = custom || await appDataDir()
         const path = await join(dir, 'smart-quiz.db')
         setDbPath(path)
       } catch (e) { }
+    }
+  }
+
+  const handleChangeDbPath = async () => {
+    if (!(window as any).__TAURI__) {
+      message.warning('网页端不支持更改本地存储路径')
+      return
+    }
+    try {
+      const { open } = await import('@tauri-apps/api/dialog')
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: '选择新的数据保存位置'
+      })
+      if (selected && typeof selected === 'string') {
+        localStorage.setItem('APP_DB_DIR', selected)
+        await loadDbPath()
+        const success = await dbManager.saveNow()
+        if (success) {
+          message.success('数据库存储位置已成功转移，新数据将写入此位置')
+        } else {
+          message.error('尝试写入新位置失败')
+        }
+      }
+    } catch (e) {
+      console.error(e)
+      message.error('选择目录失败')
     }
   }
 
@@ -266,9 +295,14 @@ const Settings: React.FC = () => {
                     <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
                       数据存储在本地 SQLite 数据库中，自动每 3 秒保存一次。
                     </Text>
-                    <Text copyable style={{ color: '#e2e8f0', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: 6, display: 'inline-block' }}>
-                      {dbPath}
-                    </Text>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                      <Text copyable style={{ color: '#e2e8f0', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: 6, display: 'inline-block', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {dbPath}
+                      </Text>
+                      {!!(window as any).__TAURI__ && (
+                        <Button onClick={handleChangeDbPath}>转移存储位置</Button>
+                      )}
+                    </div>
                   </Form.Item>
 
                   <Form.Item label="手动保存">
