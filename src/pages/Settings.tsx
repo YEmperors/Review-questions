@@ -334,11 +334,11 @@ const Settings: React.FC = () => {
                     <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
                       数据存储在本地 SQLite 数据库中，自动每 3 秒保存一次。
                     </Text>
-                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
                       {!!(window as any).__TAURI__ ? (
                         <Select 
                           value={dbPath} 
-                          style={{ flex: 1 }}
+                          style={{ flex: 1, minWidth: 200, maxWidth: '100%' }}
                           onChange={async (value) => {
                             const dirPath = value.replace(/[\\/]?smart-quiz\.db$/, '')
                             await switchDatabaseDir(dirPath)
