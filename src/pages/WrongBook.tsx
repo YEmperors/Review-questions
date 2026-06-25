@@ -129,7 +129,7 @@ const WrongBook: React.FC = () => {
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16 }}>
         <div>
           <Title level={2} style={{ margin: 0, color: '#e2e8f0', fontWeight: 700 }}>
             错题本 📝
@@ -163,8 +163,8 @@ const WrongBook: React.FC = () => {
       </div>
 
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 20 }}>
-        <Col span={8}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={24} md={8}>
           <Card
             bordered={false}
             style={{
@@ -191,7 +191,7 @@ const WrongBook: React.FC = () => {
             </div>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={24} md={8}>
           <Card
             bordered={false}
             style={{
@@ -218,7 +218,7 @@ const WrongBook: React.FC = () => {
             </div>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={24} md={8}>
           <Card
             bordered={false}
             style={{
@@ -311,7 +311,7 @@ const WrongBook: React.FC = () => {
               style: { marginTop: 12 }
             }}
             size="small"
-            scroll={{ y: 420 }}
+            scroll={{ x: 600, y: 420 }}
             style={{ marginTop: -8 }}
           />
         ) : (

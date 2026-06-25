@@ -121,20 +121,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               key: item.key,
               icon: (
                 <span style={{ fontSize: 16 }}>
-                  {hasWrong && collapsed ? (
-                    <Badge count={wrongCount} size="small" offset={[4, -2]}>
-                      {item.icon}
-                    </Badge>
-                  ) : item.icon}
+                  {item.icon}
                 </span>
               ),
               label: collapsed ? null : (
                 <span style={{ fontWeight: location.pathname === item.key ? 600 : 400 }}>
                   {hasWrong && !collapsed ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {item.label}
-                      <Badge count={wrongCount} size="small" />
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingRight: 8 }}>
+                      <span>{item.label}</span>
+                      <Badge 
+                        count={wrongCount} 
+                        style={{ 
+                          backgroundColor: 'rgba(239, 68, 68, 0.15)', 
+                          color: '#ef4444', 
+                          boxShadow: 'none',
+                          fontWeight: 600
+                        }} 
+                      />
+                    </div>
                   ) : item.label}
                 </span>
               ),
