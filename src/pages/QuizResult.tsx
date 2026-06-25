@@ -51,6 +51,7 @@ const QuizResultPage: React.FC = () => {
   const [results, setResults] = useState<QuizResult[]>([])
   const [questions, setQuestions] = useState<Question[]>([])
   const [mode, setMode] = useState<string>('practice')
+  const [timeLimit, setTimeLimit] = useState<number | null>(null)
   const [wrongDetailVisible, setWrongDetailVisible] = useState(false)
   const [selectedWrong, setSelectedWrong] = useState<QuizResult | null>(null)
   const [favoriteMap, setFavoriteMap] = useState<Record<number, boolean>>({})
@@ -63,6 +64,7 @@ const QuizResultPage: React.FC = () => {
       setResults(r)
       setQuestions(q)
       setMode(config.mode || 'practice')
+      setTimeLimit(config.timeLimit || null)
 
       const favMap: Record<number, boolean> = {}
       for (const item of r) {
@@ -109,7 +111,7 @@ const QuizResultPage: React.FC = () => {
 
   const handleRetry = () => {
     if (questions.length === 0) return
-    sessionStorage.setItem('quiz_config', JSON.stringify({ mode, timeLimit: null }))
+    sessionStorage.setItem('quiz_config', JSON.stringify({ mode, timeLimit }))
     sessionStorage.removeItem('quiz_results')
     navigate('/quiz')
   }

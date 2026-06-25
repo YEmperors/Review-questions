@@ -297,7 +297,7 @@ export function getQuizRecords(questionId?: number, limit?: number): QuizRecord[
   return selectAll<QuizRecord>('SELECT * FROM quiz_records ORDER BY created_at DESC LIMIT ?', [limit || 1000])
 }
 
-export function getWrongQuestionsWithQuestions(knowledgePoint?: string): (QuizRecord & { question: Question })[] {
+export function getWrongQuestionsWithQuestions(questionType?: string, searchText?: string): (QuizRecord & { question: Question })[] {
   let sql = `
     SELECT r.*, q.type as q_type, q.content as q_content, q.options as q_options,
            q.answer as q_answer, q.analysis as q_analysis, q.difficulty as q_difficulty,
@@ -312,9 +312,14 @@ export function getWrongQuestionsWithQuestions(knowledgePoint?: string): (QuizRe
   `
   const params: any[] = []
 
-  if (knowledgePoint) {
-    sql += ' AND q.knowledge_point = ?'
-    params.push(knowledgePoint)
+  if (questionType) {
+    sql += ' AND q.type = ?'
+    params.push(questionType)
+  }
+  
+  if (searchText) {
+    sql += ' AND q.content LIKE ?'
+    params.push(`%${searchText}%`)
   }
 
   sql += ' ORDER BY r.created_at DESC'
@@ -497,6 +502,12 @@ export function toggleFavorite(questionId: number): boolean {
 export function isFavorite(questionId: number): boolean {
   const row = selectOne<{ id: number }>('SELECT id FROM favorites WHERE question_id = ?', [questionId])
   return !!row
+}
+
+export function clearFavorites(): void {
+  const db = dbManager.getDb()
+  db.run('DELETE FROM favorites')
+  dbManager.markDirty()
 }
 
 // ==================== 学习目标 ====================

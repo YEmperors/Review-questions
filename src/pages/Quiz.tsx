@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Card, Button, Radio, Checkbox, Input, Tag, Typography, Space,
-  Progress, Modal, Result, Divider, Tooltip, Badge
+  Progress, Modal, Result, Divider, Tooltip, Badge, message
 } from 'antd'
 import {
   CheckCircleOutlined, CloseCircleOutlined,
@@ -48,7 +48,13 @@ const QuizPage: React.FC = () => {
   const [aiExplanation, setAiExplanation] = useState<string>('')
   const [aiLoading, setAiLoading] = useState(false)
   const [starred, setStarred] = useState(false)
+  const [focusedOptionIndex, setFocusedOptionIndex] = useState<number>(0)
   const questionStartRef = useRef(Date.now())
+
+  // 当题目切换时，重置聚焦索引
+  useEffect(() => {
+    setFocusedOptionIndex(0)
+  }, [currentIndex])
 
   // 提前声明，避免 useCallback 中 TDZ 引用错误
   // currentQuestion 会在每次渲染时从 questions[currentIndex] 派生
@@ -100,17 +106,20 @@ const QuizPage: React.FC = () => {
       timeSpent: ts
     }
 
-    createQuizRecord({
-      question_id: q.id,
-      user_answer: userAnswer.trim(),
-      is_correct: isCorrect,
-      time_spent: ts,
-      quiz_mode: mode
-    })
+    if (mode !== 'exam') {
+      createQuizRecord({
+        question_id: q.id,
+        user_answer: userAnswer.trim(),
+        is_correct: isCorrect,
+        time_spent: ts,
+        quiz_mode: mode
+      })
 
-    if (answerResult !== 'pending') {
-      const quality = mapQuality(isCorrectDisplay, ts)
-      processSpacedRepetition(q.id, quality)
+      if (answerResult !== 'pending') {
+        const quality = mapQuality(isCorrectDisplay, ts)
+        processSpacedRepetition(q.id, quality)
+      }
+      setShowResult(true)
     }
 
     setResults(prev => {
@@ -118,18 +127,84 @@ const QuizPage: React.FC = () => {
       next[currentIndex] = result
       return next
     })
-    setShowResult(true)
-  }, [questions, currentIndex, userAnswer, mode])
+
+    if (mode === 'exam') {
+      if (currentIndex + 1 < questions.length) {
+        setCurrentIndex(currentIndex + 1)
+        setUserAnswer(results[currentIndex + 1]?.userAnswer || '')
+        setShowResult(false)
+        setAiExplanation('')
+        setFocusedOptionIndex(0)
+        questionStartRef.current = Date.now()
+      } else {
+        // Last question in exam mode, trigger finish
+        // Need to use setTimeout to allow state update to propagate
+        setTimeout(() => handleFinish(), 0)
+      }
+    }
+  }, [questions, currentIndex, userAnswer, mode, results])
 
   const handleFinish = useCallback(() => {
     const q = getCurrentQuestion(questions, currentIndex)
-    if (userAnswer.trim() && !showResult && q && !results[currentIndex]) {
-      handleSubmit()
+    let finalResults = [...results]
+
+    if (userAnswer.trim() && !showResult && q) {
+      if (!results[currentIndex] || mode === 'exam') {
+        const ts = Math.floor((Date.now() - questionStartRef.current) / 1000)
+        const answerResult = checkAnswer(q, userAnswer)
+        let isCorrect = 0
+        if (answerResult === 'correct') isCorrect = 1
+        else if (answerResult === 'pending') isCorrect = 2
+
+        const result: QuizResult = {
+          question: q,
+          userAnswer: userAnswer.trim(),
+          isCorrect: answerResult === 'correct',
+          timeSpent: ts
+        }
+        finalResults[currentIndex] = result
+
+        if (mode !== 'exam' && !results[currentIndex]) {
+          createQuizRecord({
+            question_id: q.id,
+            user_answer: userAnswer.trim(),
+            is_correct: isCorrect,
+            time_spent: ts,
+            quiz_mode: mode
+          })
+          if (answerResult !== 'pending') {
+            processSpacedRepetition(q.id, mapQuality(answerResult === 'correct', ts))
+          }
+        }
+      }
     }
-    // We filter Boolean in case some questions were skipped
-    sessionStorage.setItem('quiz_results', JSON.stringify(results.filter(Boolean)))
+
+    if (mode === 'exam') {
+      for (const res of finalResults) {
+        if (res) {
+          const answerResult = checkAnswer(res.question, res.userAnswer)
+          let isCorrect = 0
+          if (answerResult === 'correct') isCorrect = 1
+          else if (answerResult === 'pending') isCorrect = 2
+
+          createQuizRecord({
+            question_id: res.question.id,
+            user_answer: res.userAnswer,
+            is_correct: isCorrect,
+            time_spent: res.timeSpent,
+            quiz_mode: mode
+          })
+
+          if (answerResult !== 'pending') {
+            processSpacedRepetition(res.question.id, mapQuality(answerResult === 'correct', res.timeSpent))
+          }
+        }
+      }
+    }
+
+    sessionStorage.setItem('quiz_results', JSON.stringify(finalResults.filter(Boolean)))
     navigate('/quiz-result')
-  }, [handleSubmit, userAnswer, showResult, questions, currentIndex, results, navigate])
+  }, [userAnswer, showResult, questions, currentIndex, results, mode, navigate])
 
   // 时间到自动交卷
   useEffect(() => {
@@ -137,6 +212,16 @@ const QuizPage: React.FC = () => {
       handleFinish()
     }
   }, [elapsed, timeLimit, mode, handleFinish])
+
+  // 最后 10 秒提示
+  useEffect(() => {
+    if (timeLimit && mode === 'exam') {
+      const remaining = timeLimit * 60 - elapsed
+      if (remaining === 10) {
+        message.warning('考试即将结束，仅剩 10 秒！')
+      }
+    }
+  }, [elapsed, timeLimit, mode])
 
   const handleJump = (idx: number) => {
     if (idx === currentIndex) return
@@ -203,63 +288,116 @@ const QuizPage: React.FC = () => {
   // 键盘快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLInputElement
-      const isInput = target?.tagName === 'INPUT' && !['radio', 'checkbox', 'button', 'submit'].includes(target.type)
-      const isRadioOrCheckbox = target?.tagName === 'INPUT' && ['radio', 'checkbox'].includes(target.type)
+      // 1. 如果有弹窗打开（例如 antd 的 Modal），则忽略所有快捷键，避免冲突
+      if (document.querySelector('.ant-modal-root')) {
+        const modals = document.querySelectorAll('.ant-modal-wrap')
+        for (let i = 0; i < modals.length; i++) {
+          if (window.getComputedStyle(modals[i]).display !== 'none') {
+            return
+          }
+        }
+      }
+
+      const target = e.target as HTMLElement
+      // 2. 如果焦点在按钮或链接上，且按下了 Enter 或 Space，让浏览器原生触发 click，不再重复拦截
+      if (['BUTTON', 'A'].includes(target?.tagName) && (e.key === 'Enter' || e.key === ' ')) {
+        return
+      }
+
+      const isInput = target?.tagName === 'INPUT' && !['radio', 'checkbox', 'button', 'submit'].includes((target as HTMLInputElement).type)
+      const isRadioOrCheckbox = target?.tagName === 'INPUT' && ['radio', 'checkbox'].includes((target as HTMLInputElement).type)
       const isTextarea = target?.tagName === 'TEXTAREA'
       const isTyping = isInput || isTextarea
 
+      // 3. 在展示结果阶段（或者说是练习模式提交后），此时不在答题阶段
       if (showResult) {
-        if (e.key === 'Enter' || e.key === 'ArrowRight' || e.key.toLowerCase() === 'n') {
+        if (!isTyping && (e.key === 'Enter' || e.key === 'ArrowRight' || e.key.toLowerCase() === 'n')) {
           handleNext()
         }
-        return
-      }
-
-      if (e.key === 'Escape') {
-        handleQuit()
-        return
-      }
-
-      // 星标快捷键 S
-      if (e.key.toLowerCase() === 's' && !isTyping) {
-        e.preventDefault()
-        handleToggleStar()
-      }
-
-      // AI解释快捷键 E
-      if (e.key.toLowerCase() === 'e' && !isTyping && showResult) {
-        e.preventDefault()
-        handleAIExplain()
-      }
-
-      // 方向键切换单选/判断题答案
-      // 如果焦点在单选框本身上，放行给 Ant Design 处理，否则我们自己处理
-      if (!isTyping && !isRadioOrCheckbox && currentQuestion && ['single', 'judge'].includes(currentQuestion.type) && !showResult) {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        if (!isTyping && e.key === 'Escape') {
+          handleQuit()
+        }
+        if (e.key.toLowerCase() === 'e' && !isTyping) {
           e.preventDefault()
-          const options = getOptions(currentQuestion)
-          const currentIdx = userAnswer ? userAnswer.charCodeAt(0) - 65 : -1
-          
-          let newIdx = 0
-          if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-            newIdx = currentIdx < options.length - 1 ? currentIdx + 1 : 0
-          } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-            newIdx = currentIdx > 0 ? currentIdx - 1 : options.length - 1
-          }
-          setUserAnswer(String.fromCharCode(65 + newIdx))
+          handleAIExplain()
+        }
+        if (e.key.toLowerCase() === 's' && !isTyping) {
+          e.preventDefault()
+          handleToggleStar()
+        }
+        return
+      }
+
+      // 以下是答题阶段
+
+      // 非输入状态下的全局快捷键
+      if (!isTyping) {
+        if (e.key === 'Escape') {
+          handleQuit()
+          return
+        }
+
+        if (e.key.toLowerCase() === 's') {
+          e.preventDefault()
+          handleToggleStar()
+        }
+        
+        // 填空/简答题按下Enter自动聚焦输入框
+        if (e.key === 'Enter' && currentQuestion && ['fill', 'short_answer', 'coding'].includes(currentQuestion.type)) {
+          e.preventDefault()
+          document.getElementById('quiz-text-input')?.focus()
+          return
         }
       }
 
-      // 填空/简答题按下Enter自动聚焦输入框
-      if (e.key === 'Enter' && !isTyping && currentQuestion && ['fill', 'short_answer', 'coding'].includes(currentQuestion.type) && !showResult) {
-        e.preventDefault()
-        document.getElementById('quiz-text-input')?.focus()
-        return
+      // 选项快捷键：上下左右方向键，空格键选中
+      if (!isTyping && !isRadioOrCheckbox && currentQuestion) {
+        const options = getOptions(currentQuestion)
+        const isSingle = ['single', 'judge'].includes(currentQuestion.type)
+        const isMultiple = currentQuestion.type === 'multiple'
+
+        // 方向键
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+          e.preventDefault()
+          if (isSingle) {
+            const currentIdx = userAnswer ? userAnswer.charCodeAt(0) - 65 : -1
+            let newIdx = 0
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+              newIdx = currentIdx < options.length - 1 ? currentIdx + 1 : 0
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+              newIdx = currentIdx > 0 ? currentIdx - 1 : options.length - 1
+            }
+            setUserAnswer(String.fromCharCode(65 + newIdx))
+          } else if (isMultiple) {
+            let newIdx = focusedOptionIndex
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+              newIdx = newIdx < options.length - 1 ? newIdx + 1 : 0
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+              newIdx = newIdx > 0 ? newIdx - 1 : options.length - 1
+            }
+            setFocusedOptionIndex(newIdx)
+          }
+        }
+
+        // 空格或Enter键选中多选题
+        if ((e.key === ' ' || e.key === 'Enter') && isMultiple && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault()
+          const letter = String.fromCharCode(65 + focusedOptionIndex)
+          if (userAnswer.includes(letter)) {
+            setUserAnswer(userAnswer.replace(letter, ''))
+          } else {
+            setUserAnswer(userAnswer.split('').concat(letter).sort().join(''))
+          }
+          if (e.key === 'Enter') return // 如果是Enter，阻断向下执行，防止触发提交
+        }
       }
 
       // 提交答案
       if (e.key === 'Enter' && userAnswer.trim()) {
+        const isMultiple = currentQuestion?.type === 'multiple'
+        // 多选题如果按下了回车但没有加Ctrl/Cmd，不能在这里提交，因为前面已经用来选中了
+        if (isMultiple && !(e.ctrlKey || e.metaKey)) return
+
         // 在普通输入框按回车提交，在多行文本框按 Ctrl+Enter 提交
         if (!isTextarea || (isTextarea && (e.ctrlKey || e.metaKey))) {
           e.preventDefault()
@@ -270,7 +408,7 @@ const QuizPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showResult, currentQuestion, userAnswer, handleSubmit, handleNext, handleQuit])
+  }, [showResult, currentQuestion, userAnswer, handleSubmit, handleNext, handleQuit, focusedOptionIndex])
 
   const formatTime = (seconds: number): string => {
     const m = Math.floor(seconds / 60)
@@ -296,6 +434,19 @@ const QuizPage: React.FC = () => {
 
   const timeLimitRemaining = timeLimit ? timeLimit * 60 - elapsed : null
   const isTimeWarning = timeLimitRemaining !== null && timeLimitRemaining < 60
+
+  const submitActionText = mode === 'exam' ? (currentIndex === questions.length - 1 ? '交卷' : '下一题') : '提交'
+  const getShortcutHint = () => {
+    if (currentQuestion.type === 'single' || currentQuestion.type === 'judge') return `方向键切换 · Enter ${submitActionText} · Esc 退出`
+    if (currentQuestion.type === 'multiple') return `方向键+Enter 选中 · Ctrl+Enter ${submitActionText} · Esc 退出`
+    if (currentQuestion.type === 'coding') return `Ctrl+Enter ${submitActionText} · Esc 退出`
+    return `Enter ${submitActionText} · Esc 退出`
+  }
+  const getButtonShortcutText = () => {
+    const isCtrl = currentQuestion.type === 'multiple' || currentQuestion.type === 'coding'
+    const btnAction = mode === 'exam' ? (currentIndex === questions.length - 1 ? '交卷' : '下一题') : '提交答案'
+    return `${btnAction} (${isCtrl ? 'Ctrl + Enter' : 'Enter'})`
+  }
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto' }}>
@@ -334,6 +485,11 @@ const QuizPage: React.FC = () => {
           </Space>
 
           <Space size={16}>
+            {mode === 'exam' && (
+              <Button size="small" type="primary" onClick={handleFinish} style={{ borderRadius: 6, background: '#ef4444', borderColor: '#ef4444' }}>
+                提前交卷
+              </Button>
+            )}
             <Tooltip title={starred ? '取消收藏' : '收藏此题'}>
               <Button
                 type="text"
@@ -463,8 +619,9 @@ const QuizPage: React.FC = () => {
                           width: '100%',
                           padding: '12px 16px',
                           borderRadius: 10,
-                          border: `1px solid ${isChecked ? '#8b5cf6' : 'rgba(255,255,255,0.08)'}`,
-                          background: isChecked ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.02)',
+                          border: `1px solid ${isChecked ? '#8b5cf6' : (focusedOptionIndex === idx ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.08)')}`,
+                          background: isChecked ? 'rgba(139,92,246,0.12)' : (focusedOptionIndex === idx ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'),
+                          boxShadow: focusedOptionIndex === idx ? '0 0 0 2px rgba(139,92,246,0.2)' : 'none',
                           transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
                           margin: 0,
                         }}
@@ -538,9 +695,7 @@ const QuizPage: React.FC = () => {
             <div style={{ marginTop: 24, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
               <Text style={{ fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <KeyOutlined />
-                {currentQuestion.type === 'single' || currentQuestion.type === 'judge'
-                  ? 'A/B/C/D 选择 · Enter 提交 · Esc 退出'
-                  : 'Enter 提交 · Esc 退出'}
+                {getShortcutHint()}
               </Text>
               <Button
                 type="primary"
@@ -560,7 +715,7 @@ const QuizPage: React.FC = () => {
                   boxShadow: userAnswer.trim() ? '0 4px 16px rgba(99,102,241,0.4)' : 'none',
                 }}
               >
-                提交答案
+                {getButtonShortcutText()}
               </Button>
             </div>
           </div>
@@ -733,19 +888,25 @@ const QuizPage: React.FC = () => {
               color = '#818cf8'
               border = '#6366f1'
             } else if (result) {
-              const status = checkAnswer(result.question, result.userAnswer)
-              if (status === 'correct') {
-                bg = 'rgba(34,197,94,0.15)'
-                color = '#22c55e'
-                border = 'rgba(34,197,94,0.3)'
-              } else if (status === 'pending') {
-                bg = 'rgba(245,158,11,0.15)'
-                color = '#f59e0b'
-                border = 'rgba(245,158,11,0.3)'
+              if (mode === 'exam') {
+                bg = 'rgba(99,102,241,0.1)'
+                color = '#a5b4fc'
+                border = 'rgba(99,102,241,0.3)'
               } else {
-                bg = 'rgba(239,68,68,0.15)'
-                color = '#ef4444'
-                border = 'rgba(239,68,68,0.3)'
+                const status = checkAnswer(result.question, result.userAnswer)
+                if (status === 'correct') {
+                  bg = 'rgba(34,197,94,0.15)'
+                  color = '#22c55e'
+                  border = 'rgba(34,197,94,0.3)'
+                } else if (status === 'pending') {
+                  bg = 'rgba(245,158,11,0.15)'
+                  color = '#f59e0b'
+                  border = 'rgba(245,158,11,0.3)'
+                } else {
+                  bg = 'rgba(239,68,68,0.15)'
+                  color = '#ef4444'
+                  border = 'rgba(239,68,68,0.3)'
+                }
               }
             }
 

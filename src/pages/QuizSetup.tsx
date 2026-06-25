@@ -8,7 +8,7 @@ import {
   RobotOutlined, PlayCircleOutlined, InfoCircleOutlined
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { getQuestionBanks, getQuestions, getQuestionCount, getKnowledgePoints } from '../db/repositories'
+import { getQuestionBanks, getQuestions, getQuestionCount, getKnowledgePoints, getDueReviewQuestions, getQuestionsByIds } from '../db/repositories'
 import { getSmartQuestions } from '../services/adaptive-difficulty'
 import { QuestionType, QuizMode } from '../types'
 
@@ -80,6 +80,21 @@ const QuizSetup: React.FC = () => {
           values.questionCount || 20,
           values.questionTypes
         )
+      } else if (mode === 'review') {
+        const dueIds = getDueReviewQuestions()
+        let dueQuestions = getQuestionsByIds(dueIds)
+        
+        if (values.bankId) {
+          dueQuestions = dueQuestions.filter(q => q.bank_id === values.bankId)
+        }
+        if (values.questionTypes && values.questionTypes.length > 0) {
+          dueQuestions = dueQuestions.filter(q => values.questionTypes.includes(q.type))
+        }
+        
+        questions = dueQuestions
+        if (values.questionCount && questions.length > values.questionCount) {
+          questions = questions.sort(() => Math.random() - 0.5).slice(0, values.questionCount)
+        }
       } else {
         const questionTypes = values.questionTypes as QuestionType[] | undefined
         questions = getQuestions({
@@ -130,7 +145,14 @@ const QuizSetup: React.FC = () => {
           layout="vertical"
           initialValues={{ mode: 'practice', questionCount: 20 }}
           onValuesChange={(changed) => {
-            if (changed.mode) setSelectedMode(changed.mode)
+            if (changed.mode) {
+              setSelectedMode(changed.mode)
+              if (changed.mode === 'exam') {
+                form.setFieldsValue({ timeLimit: 60 })
+              } else {
+                form.setFieldsValue({ timeLimit: null })
+              }
+            }
           }}
         >
           <Form.Item name="mode" noStyle>

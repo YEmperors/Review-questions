@@ -18,6 +18,8 @@ export interface Question {
   options: string | null       // JSON 字符串，选择题选项数组
   answer: string               // 正确答案
   analysis: string | null      // 解析
+  difficulty?: number          // 难度
+  knowledge_point?: string | null // 知识点
   tags: string | null          // JSON 字符串，标签数组
   bank_id: number
   created_at: string

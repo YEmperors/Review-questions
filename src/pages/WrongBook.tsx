@@ -1,19 +1,20 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   Card, Table, Tag, Space, Button, Select, Typography,
-  Empty, Modal, Tooltip, Row, Col, Statistic, List, Popconfirm
+  Empty, Modal, Tooltip, Row, Col, Statistic, List, Popconfirm, message, FloatButton, Input
 } from 'antd'
 import {
   CloseCircleOutlined, RedoOutlined,
   FilterOutlined, BarChartOutlined, BulbOutlined,
-  PlayCircleOutlined
+  PlayCircleOutlined, DeleteOutlined, StarOutlined, SearchOutlined
 } from '@ant-design/icons'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Cell
 } from 'recharts'
 import {
   getKnowledgePointStats, getDueReviewQuestions, getQuestionsByIds,
-  getWrongQuestionsWithQuestions, removeQuestionFromWrongBook, debugForceDueReview, clearWrongBook
+  getWrongQuestionsWithQuestions, removeQuestionFromWrongBook, debugForceDueReview, clearWrongBook,
+  toggleFavorite, getFavorites
 } from '../db/repositories'
 import { Question, QuizRecord } from '../types'
 import { useNavigate } from 'react-router-dom'
@@ -32,13 +33,14 @@ const WrongBook: React.FC = () => {
   const [dueQuestions, setDueQuestions] = useState<Question[]>([])
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<(QuizRecord & { question: Question }) | null>(null)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   
-  const [selectedKp, setSelectedKp] = useState<string | undefined>(undefined)
-  const [allKps, setAllKps] = useState<string[]>([])
+  const [selectedType, setSelectedType] = useState<string | undefined>(undefined)
+  const [searchText, setSearchText] = useState('')
   const [weakKps, setWeakKps] = useState<{ knowledge_point: string; total: number; correct: number; rate: number }[]>([])
 
   const loadData = useCallback(() => {
-    setWrongRecords(getWrongQuestionsWithQuestions(selectedKp))
+    setWrongRecords(getWrongQuestionsWithQuestions(selectedType, searchText))
     const dueIds = getDueReviewQuestions()
     if (dueIds.length > 0) {
       setDueQuestions(getQuestionsByIds(dueIds))
@@ -49,8 +51,7 @@ const WrongBook: React.FC = () => {
     const stats = getKnowledgePointStats()
     const weak = stats.filter(s => s.rate < 60).sort((a, b) => a.rate - b.rate)
     setWeakKps(weak)
-    setAllKps(stats.map(s => s.knowledge_point))
-  }, [selectedKp])
+  }, [selectedType, searchText])
 
   useEffect(() => {
     loadData()
@@ -179,15 +180,7 @@ const WrongBook: React.FC = () => {
               清空错题本
             </Button>
           </Popconfirm>
-          <Button
-            onClick={() => {
-              debugForceDueReview()
-              loadData()
-            }}
-            style={{ borderRadius: 8 }}
-          >
-            🧪 模拟时间加速
-          </Button>
+
           <Button
             icon={<PlayCircleOutlined />}
             onClick={handleReviewDue}
@@ -277,34 +270,90 @@ const WrongBook: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ color: '#e2e8f0', fontWeight: 600 }}>错题列表</span>
             <Select
-              value={selectedKp}
-              onChange={setSelectedKp}
+              value={selectedType}
+              onChange={setSelectedType}
               allowClear
-              placeholder="按知识点筛选"
-              style={{ width: 180, fontWeight: 400 }}
+              placeholder="按题型筛选"
+              style={{ width: 140, fontWeight: 400 }}
               size="small"
             >
-              {allKps.map(kp => (
-                <Option key={kp} value={kp}>{kp}</Option>
+              {Object.entries(typeLabels).map(([type, label]) => (
+                <Option key={type} value={type}>{label}</Option>
               ))}
             </Select>
+            <Input
+              prefix={<SearchOutlined style={{ color: '#64748b' }} />}
+              placeholder="搜索题目内容"
+              value={searchText}
+              onChange={e => setSearchText(e.target.value)}
+              allowClear
+              style={{ width: 180 }}
+              size="small"
+            />
+            {selectedRowKeys.length > 0 && (
+              <Space>
+                <Button icon={<StarOutlined />} size="small" onClick={() => {
+                  const favIds = getFavorites()
+                  let addedCount = 0
+                  selectedRowKeys.forEach(id => {
+                    const record = wrongRecords.find(r => r.id === Number(id))
+                    if (record && !favIds.includes(record.question_id)) {
+                      toggleFavorite(record.question_id)
+                      addedCount++
+                    }
+                  })
+                  setSelectedRowKeys([])
+                  if (addedCount > 0) {
+                    message.success(`成功收藏了 ${addedCount} 道错题`)
+                  } else {
+                    message.info('选中的错题已全部在收藏夹中')
+                  }
+                }}>
+                  批量收藏
+                </Button>
+                <Popconfirm
+                  title="批量移除"
+                  description={`确定要移除选中的 ${selectedRowKeys.length} 道错题吗？`}
+                  onConfirm={() => {
+                    selectedRowKeys.forEach(id => {
+                      const record = wrongRecords.find(r => r.id === Number(id))
+                      if (record) removeQuestionFromWrongBook(record.question_id)
+                    })
+                    setSelectedRowKeys([])
+                    loadData()
+                    message.success(`成功移除了 ${selectedRowKeys.length} 道错题`)
+                  }}
+                  okText="确定"
+                  cancelText="取消"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button danger size="small" icon={<DeleteOutlined />}>批量移除</Button>
+                </Popconfirm>
+              </Space>
+            )}
           </div>
         }
       >
         {wrongRecords.length > 0 ? (
           <Table
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (newSelectedRowKeys: React.Key[]) => {
+                setSelectedRowKeys(newSelectedRowKeys)
+              }
+            }}
             rowKey="id"
             columns={columns}
             dataSource={wrongRecords}
             pagination={{
-              defaultPageSize: 15,
+              defaultPageSize: 20,
               showSizeChanger: true,
-              pageSizeOptions: ['15', '30', '50'],
-              showTotal: total => `共 ${total} 题`,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              showTotal: total => `共 ${total} 条`,
               style: { marginTop: 12 }
             }}
             size="small"
-            scroll={{ x: 600 }}
+            scroll={{ x: 600, y: 500 }}
             style={{ marginTop: -8 }}
           />
         ) : (
@@ -374,6 +423,8 @@ const WrongBook: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      <FloatButton.BackTop style={{ right: '50%', transform: 'translateX(50%)', bottom: 24 }} visibilityHeight={100} target={() => document.querySelector('.ant-table-body') || window as any} />
     </div>
   )
 }

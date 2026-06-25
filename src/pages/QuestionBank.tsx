@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import {
   Card, Table, Button, Modal, Form, Input, Select, Tag, Space,
-  Upload, message, Popconfirm, Row, Col, Typography, Radio, Dropdown
+  Upload, message, Popconfirm, Row, Col, Typography, Radio, Dropdown, FloatButton
 } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   PlusOutlined, UploadOutlined, DeleteOutlined, EditOutlined,
-  DatabaseOutlined, DownloadOutlined, StarOutlined, StarFilled, PlayCircleOutlined
+  DatabaseOutlined, DownloadOutlined, StarOutlined, StarFilled, PlayCircleOutlined, SearchOutlined
 } from '@ant-design/icons'
 import * as XLSX from 'xlsx'
 import mammoth from 'mammoth'
@@ -47,6 +47,7 @@ const QuestionBankPage: React.FC = () => {
   const [form] = Form.useForm()
   const [bankForm] = Form.useForm()
   const [filterType, setFilterType] = useState<string | undefined>(undefined)
+  const [searchText, setSearchText] = useState('')
   const [favSet, setFavSet] = useState<Set<number>>(new Set())
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [importBankId, setImportBankId] = useState<number>(1)
@@ -64,7 +65,8 @@ const QuestionBankPage: React.FC = () => {
     const types = filterType ? [filterType as QuestionType] : undefined
     setQuestions(getQuestions({
       bankId: selectedBank,
-      types
+      types,
+      keyword: searchText
     }))
     setKnowledgePoints(getKnowledgePoints(selectedBank))
     setBankCounts(getAllQuestionCounts())
@@ -77,7 +79,7 @@ const QuestionBankPage: React.FC = () => {
   useEffect(() => {
     loadQuestions()
     setSelectedRowKeys([])
-  }, [selectedBank, filterType])
+  }, [selectedBank, filterType, searchText])
 
   // 当题目列表发生变化时（如删除题目、清空题库），自动剔除已经被删除的选中项
   useEffect(() => {
@@ -367,7 +369,9 @@ const QuestionBankPage: React.FC = () => {
         } else if (content.includes('___') || content.includes('____') || content.includes('（　）') || content.includes('( )') || content.includes('()') || content.includes('__')) {
           type = QuestionType.FILL
         } else if (answer.trim().length > 0) {
-          type = QuestionType.FILL
+          const isSubjective = answer.trim().length > 20 || 
+            /谈谈|简述|论述|为什么|如何|怎样|理解|评价|分析|名词解释|简答/.test(content)
+          type = isSubjective ? QuestionType.SHORT_ANSWER : QuestionType.FILL
         } else {
           // 无选项且无答案，归为简答/问答题
           type = QuestionType.SHORT_ANSWER
@@ -465,7 +469,9 @@ const QuestionBankPage: React.FC = () => {
               } else if (content.includes('___') || content.includes('____') || content.includes('（　）') || content.includes('( )') || content.includes('()') || content.includes('__')) {
                 inferredType = QuestionType.FILL
               } else if (answer.trim().length > 0) {
-                inferredType = QuestionType.FILL
+                const isSubjective = answer.trim().length > 20 || 
+                  /谈谈|简述|论述|为什么|如何|怎样|理解|评价|分析|名词解释|简答/.test(content)
+                inferredType = isSubjective ? QuestionType.SHORT_ANSWER : QuestionType.FILL
               } else {
                 inferredType = QuestionType.SHORT_ANSWER
               }
@@ -778,19 +784,45 @@ D. 黄瓜
             <Option value="short_answer">简答题</Option>
             <Option value="coding">编程题</Option>
           </Select>
+          <Input
+            prefix={<SearchOutlined style={{ color: '#64748b' }} />}
+            placeholder="搜索题目内容"
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            allowClear
+            style={{ width: 200 }}
+          />
 
           </Space>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {selectedRowKeys.length > 0 && (
-              <>
+              <Space>
                 <Button type="primary" style={{ background: '#10b981', borderColor: '#10b981' }} icon={<PlayCircleOutlined />} onClick={handlePracticeSelected}>
                   练习选中 ({selectedRowKeys.length})
+                </Button>
+                <Button icon={<StarOutlined />} onClick={() => {
+                  const favIds = getFavorites()
+                  let addedCount = 0
+                  selectedRowKeys.forEach(id => {
+                    if (!favIds.includes(Number(id))) {
+                      toggleFavorite(Number(id))
+                      addedCount++
+                    }
+                  })
+                  setSelectedRowKeys([])
+                  if (addedCount > 0) {
+                    message.success(`成功收藏了 ${addedCount} 道题目`)
+                  } else {
+                    message.info('选中的题目已全部在收藏夹中')
+                  }
+                }}>
+                  批量收藏
                 </Button>
                 <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
                   批量删除 ({selectedRowKeys.length})
                 </Button>
-              </>
+              </Space>
             )}
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddQuestion}>
               添加题目
@@ -978,6 +1010,8 @@ C.选项三  D.选项四
           </Col>
         </Row>
       </Modal>
+
+      <FloatButton.BackTop style={{ right: '50%', transform: 'translateX(50%)', bottom: 24 }} visibilityHeight={100} target={() => document.querySelector('.ant-table-body') || window as any} />
     </div>
   )
 }

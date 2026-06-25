@@ -1,26 +1,29 @@
-import React, { useEffect, useState } from 'react'
-import { ConfigProvider, theme, Spin, message } from 'antd'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { ConfigProvider, theme, Spin, message, Button, Space, Typography } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/MainLayout'
-import Dashboard from './pages/Dashboard'
-import QuestionBank from './pages/QuestionBank'
-import Quiz from './pages/Quiz'
-import QuizSetup from './pages/QuizSetup'
-import QuizResult from './pages/QuizResult'
-import WrongBook from './pages/WrongBook'
-import AIQuiz from './pages/AIQuiz'
-import Favorites from './pages/Favorites'
-import Settings from './pages/Settings'
 import ErrorBoundary from './components/ErrorBoundary'
 import dbManager from './db'
+
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const QuestionBank = lazy(() => import('./pages/QuestionBank'))
+const Quiz = lazy(() => import('./pages/Quiz'))
+const QuizSetup = lazy(() => import('./pages/QuizSetup'))
+const QuizResult = lazy(() => import('./pages/QuizResult'))
+const WrongBook = lazy(() => import('./pages/WrongBook'))
+const AIQuiz = lazy(() => import('./pages/AIQuiz'))
+const Favorites = lazy(() => import('./pages/Favorites'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 const App: React.FC = () => {
   const [ready, setReady] = useState(false)
   const [initError, setInitError] = useState<string | null>(null)
   const [msgApi, contextHolder] = message.useMessage()
 
-  useEffect(() => {
+  const [showSetup, setShowSetup] = useState(false)
+
+  const initDb = () => {
     dbManager.init()
       .then(() => setReady(true))
       .catch((err) => {
@@ -28,7 +31,43 @@ const App: React.FC = () => {
         setInitError(err.message || String(err))
         msgApi.error('数据库初始化失败')
       })
+  }
+
+  useEffect(() => {
+    const isTauri = !!(window as any).__TAURI__
+    const initialized = localStorage.getItem('APP_INITIALIZED')
+    if (isTauri && !initialized) {
+      setShowSetup(true)
+    } else {
+      initDb()
+    }
   }, [])
+
+  const handleSetupDefault = () => {
+    localStorage.setItem('APP_INITIALIZED', '1')
+    setShowSetup(false)
+    initDb()
+  }
+
+  const handleSetupCustom = async () => {
+    try {
+      const { open } = await import('@tauri-apps/api/dialog')
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: '选择数据保存位置'
+      })
+      if (selected && typeof selected === 'string') {
+        localStorage.setItem('APP_DB_DIR', selected)
+        localStorage.setItem('APP_INITIALIZED', '1')
+        setShowSetup(false)
+        initDb()
+      }
+    } catch (e) {
+      console.error(e)
+      msgApi.error('选择目录失败')
+    }
+  }
 
   // 窗口关闭前同步保存数据库
   useEffect(() => {
@@ -68,6 +107,17 @@ const App: React.FC = () => {
           <div style={{ color: '#ef4444', fontSize: 16, textAlign: 'center', padding: '0 20px' }}>
             <div>数据库加载失败：</div>
             <div style={{ marginTop: 8, fontFamily: 'monospace', opacity: 0.8 }}>{initError}</div>
+          </div>
+        ) : showSetup ? (
+          <div style={{ background: '#1e1e2e', padding: 32, borderRadius: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', maxWidth: 400, textAlign: 'center' }}>
+            <Typography.Title level={4} style={{ color: '#e2e8f0', marginTop: 0 }}>首次启动配置</Typography.Title>
+            <Typography.Paragraph style={{ color: '#94a3b8', marginBottom: 24 }}>
+              请选择应用的数据库文件保存位置。如果不需要自定义，可以使用系统默认位置。
+            </Typography.Paragraph>
+            <Space size="middle">
+              <Button onClick={handleSetupCustom}>自定义路径</Button>
+              <Button type="primary" onClick={handleSetupDefault} style={{ background: '#6366f1' }}>使用默认位置</Button>
+            </Space>
           </div>
         ) : (
           <>
@@ -159,18 +209,24 @@ const App: React.FC = () => {
       <ErrorBoundary>
         <Router>
           <MainLayout>
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/bank" element={<QuestionBank />} />
-              <Route path="/quiz-setup" element={<QuizSetup />} />
-              <Route path="/quiz" element={<Quiz />} />
-              <Route path="/quiz-result" element={<QuizResult />} />
-              <Route path="/wrong-book" element={<WrongBook />} />
-              <Route path="/ai-quiz" element={<AIQuiz />} />
-              <Route path="/favorites" element={<Favorites />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
+            <Suspense fallback={
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '60vh' }}>
+                <Spin size="large" />
+              </div>
+            }>
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/bank" element={<QuestionBank />} />
+                <Route path="/quiz-setup" element={<QuizSetup />} />
+                <Route path="/quiz" element={<Quiz />} />
+                <Route path="/quiz-result" element={<QuizResult />} />
+                <Route path="/wrong-book" element={<WrongBook />} />
+                <Route path="/ai-quiz" element={<AIQuiz />} />
+                <Route path="/favorites" element={<Favorites />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            </Suspense>
           </MainLayout>
         </Router>
       </ErrorBoundary>

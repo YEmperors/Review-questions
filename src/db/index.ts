@@ -5,14 +5,20 @@ import { appDataDir, join } from '@tauri-apps/api/path'
 
 const isTauri = !!(window as any).__TAURI__
 
+async function getTauriDbDir() {
+  const custom = localStorage.getItem('APP_DB_DIR')
+  if (custom) return custom
+  return await appDataDir()
+}
+
 async function getTauriDbPath() {
-  const dir = await appDataDir()
+  const dir = await getTauriDbDir()
   return await join(dir, 'smart-quiz.db')
 }
 
 async function getTauriDbData(): Promise<Uint8Array | null> {
   try {
-    const dir = await appDataDir()
+    const dir = await getTauriDbDir()
     if (!(await exists(dir))) {
       await createDir(dir, { recursive: true })
     }
@@ -28,7 +34,7 @@ async function getTauriDbData(): Promise<Uint8Array | null> {
 
 async function saveTauriDbData(data: Uint8Array): Promise<boolean> {
   try {
-    const dir = await appDataDir()
+    const dir = await getTauriDbDir()
     if (!(await exists(dir))) {
       await createDir(dir, { recursive: true })
     }

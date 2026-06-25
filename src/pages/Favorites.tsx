@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import {
   Card, Table, Tag, Space, Button, Select, Typography,
-  Empty, Modal, message, Popconfirm, Row, Col, Input
+  Empty, Modal, message, Popconfirm, Row, Col, Input, FloatButton
 } from 'antd'
 import {
   StarFilled, DeleteOutlined, SendOutlined, SearchOutlined
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import {
-  getFavorites, getQuestionsByIds, toggleFavorite
+  getFavorites, getQuestionsByIds, toggleFavorite, clearFavorites
 } from '../db/repositories'
 import { Question } from '../types'
 
@@ -37,6 +37,7 @@ const Favorites: React.FC = () => {
   const [searchText, setSearchText] = useState('')
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
 
   const loadData = () => {
     const favIds = getFavorites()
@@ -152,21 +153,39 @@ const Favorites: React.FC = () => {
             已收藏 {allQuestions.length} 道题目
           </Text>
         </div>
-        <Button
-          type="primary"
-          size="large"
-          icon={<SendOutlined />}
-          onClick={handleStartPractice}
-          disabled={questions.length === 0}
-          style={{
-            background: questions.length > 0 ? 'linear-gradient(135deg, #f59e0b, #f97316)' : undefined,
-            border: 'none', borderRadius: 10, height: 44,
-            fontWeight: 600,
-            boxShadow: questions.length > 0 ? '0 4px 16px rgba(245,158,11,0.35)' : 'none',
-          }}
-        >
-          练习收藏题 ({questions.length})
-        </Button>
+        <Space>
+          <Popconfirm
+            title="确定要清空收藏夹吗？"
+            onConfirm={() => {
+              clearFavorites()
+              setSelectedRowKeys([])
+              loadData()
+              message.success('收藏夹已清空')
+            }}
+            okText="确定清空"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+          >
+            <Button danger style={{ borderRadius: 10, height: 44 }} disabled={allQuestions.length === 0}>
+              清空收藏夹
+            </Button>
+          </Popconfirm>
+          <Button
+            type="primary"
+            size="large"
+            icon={<SendOutlined />}
+            onClick={handleStartPractice}
+            disabled={questions.length === 0}
+            style={{
+              background: questions.length > 0 ? 'linear-gradient(135deg, #f59e0b, #f97316)' : undefined,
+              border: 'none', borderRadius: 10, height: 44,
+              fontWeight: 600,
+              boxShadow: questions.length > 0 ? '0 4px 16px rgba(245,158,11,0.35)' : 'none',
+            }}
+          >
+            练习收藏题 ({questions.length})
+          </Button>
+        </Space>
       </div>
 
       {/* 筛选栏 */}
@@ -191,6 +210,23 @@ const Favorites: React.FC = () => {
             <Text style={{ color: '#64748b', fontSize: 13 }}>
               筛选结果: {questions.length} 题
             </Text>
+          )}
+          {selectedRowKeys.length > 0 && (
+            <Popconfirm
+              title="批量取消收藏"
+              description={`确定要移除选中的 ${selectedRowKeys.length} 道收藏题目吗？`}
+              onConfirm={() => {
+                selectedRowKeys.forEach(id => toggleFavorite(Number(id)))
+                setSelectedRowKeys([])
+                loadData()
+                message.success(`成功取消收藏了 ${selectedRowKeys.length} 道题目`)
+              }}
+              okText="确定"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger icon={<DeleteOutlined />}>批量取消收藏</Button>
+            </Popconfirm>
           )}
         </Space>
       </Card>
@@ -237,14 +273,20 @@ const Favorites: React.FC = () => {
           bodyStyle={{ padding: '0 0 8px' }}
         >
           <Table
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (newSelectedRowKeys: React.Key[]) => {
+                setSelectedRowKeys(newSelectedRowKeys)
+              }
+            }}
             rowKey="id"
             columns={columns}
             dataSource={questions}
             pagination={{
-              defaultPageSize: 15,
+              defaultPageSize: 20,
               showSizeChanger: true,
-              pageSizeOptions: ['15', '30', '50'],
-              showTotal: total => `共 ${total} 题`,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              showTotal: total => `共 ${total} 条`,
               style: { padding: '12px 20px 0' }
             }}
             size="small"
@@ -337,6 +379,8 @@ const Favorites: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      <FloatButton.BackTop style={{ right: '50%', transform: 'translateX(50%)', bottom: 24 }} visibilityHeight={100} target={() => document.querySelector('.ant-table-body') || window as any} />
     </div>
   )
 }

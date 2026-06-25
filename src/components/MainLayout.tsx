@@ -236,7 +236,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </Sider>
 
       <Layout style={{ background: 'transparent' }}>
-        <Content className="responsive-content-padding" style={{
+        <Content id="main-scroll-container" className="responsive-content-padding" style={{
           margin: 0,
           padding: '24px 28px',
           overflow: 'auto',
