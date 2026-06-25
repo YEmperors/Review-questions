@@ -79,6 +79,16 @@ const QuestionBankPage: React.FC = () => {
     setSelectedRowKeys([])
   }, [selectedBank, filterType])
 
+  // 当题目列表发生变化时（如删除题目、清空题库），自动剔除已经被删除的选中项
+  useEffect(() => {
+    if (questions.length === 0) {
+      if (selectedRowKeys.length > 0) setSelectedRowKeys([])
+    } else {
+      const currentIds = new Set(questions.map(q => q.id))
+      setSelectedRowKeys(prev => prev.filter(key => currentIds.has(key as number)))
+    }
+  }, [questions])
+
   // ==================== 题库分类管理 ====================
   const handleAddBank = () => {
     bankForm.validateFields().then(values => {
@@ -103,9 +113,11 @@ const QuestionBankPage: React.FC = () => {
           deleteQuestionsBatch(qs.map(q => q.id))
         }
         message.success('默认题库中的题目已清空')
+        setSelectedRowKeys([])
       } else {
         deleteQuestionBank(id)
         if (selectedBank === id) setSelectedBank(undefined)
+        setSelectedRowKeys([])
         message.success('题库已删除')
       }
       loadBanks()
@@ -188,6 +200,7 @@ const QuestionBankPage: React.FC = () => {
     try {
       deleteQuestion(id)
       message.success('题目已删除')
+      setSelectedRowKeys(prev => prev.filter(k => k !== id))
       loadQuestions()
     } catch (err) {
       message.error('删除题目失败')
