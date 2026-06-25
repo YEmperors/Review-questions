@@ -700,18 +700,20 @@ D. 黄瓜
                   >
                     {bank.name} ({bankCounts[bank.id] ?? 0})
                   </Tag>
-                  <span className="bank-tag-action">
-                    <Popconfirm
-                      title={`删除题库「${bank.name}」？`}
-                      description={`该题库内所有题目（含子题库题目）将一并删除，此操作不可恢复。`}
-                      okText="确认删除"
-                      okButtonProps={{ danger: true }}
-                      cancelText="取消"
-                      onConfirm={() => handleDeleteBank(bank.id)}
-                    >
-                      <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                    </Popconfirm>
-                  </span>
+                  {bank.id !== 1 && (
+                    <span className="bank-tag-action">
+                      <Popconfirm
+                        title={`删除题库「${bank.name}」？`}
+                        description={`该题库内所有题目（含子题库题目）将一并删除，此操作不可恢复。`}
+                        okText="确认删除"
+                        okButtonProps={{ danger: true }}
+                        cancelText="取消"
+                        onConfirm={() => handleDeleteBank(bank.id)}
+                      >
+                        <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                      </Popconfirm>
+                    </span>
+                  )}
                 </span>
               ))}
               <Button type="dashed" size="small" icon={<PlusOutlined />}
