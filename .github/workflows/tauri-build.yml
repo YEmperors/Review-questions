@@ -39,3 +39,9 @@ jobs:
           releaseBody: "🤖 智能刷题桌面版更新！\n请从下方下载 .msi 安装包或者 .exe 独立运行包。"
           releaseDraft: true
           prerelease: false
+
+      - name: Upload Portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-quiz-app-portable-exe
+          path: src-tauri/target/release/smart-quiz-app.exe
