@@ -48,12 +48,12 @@ const QuizPage: React.FC = () => {
   const [aiExplanation, setAiExplanation] = useState<string>('')
   const [aiLoading, setAiLoading] = useState(false)
   const [starred, setStarred] = useState(false)
-  const [focusedOptionIndex, setFocusedOptionIndex] = useState<number>(0)
+  const [focusedOptionIndex, setFocusedOptionIndex] = useState<number>(-1)
   const questionStartRef = useRef(Date.now())
 
   // 当题目切换时，重置聚焦索引
   useEffect(() => {
-    setFocusedOptionIndex(0)
+    setFocusedOptionIndex(-1)
   }, [currentIndex])
 
   // 提前声明，避免 useCallback 中 TDZ 引用错误
@@ -134,7 +134,7 @@ const QuizPage: React.FC = () => {
         setUserAnswer(results[currentIndex + 1]?.userAnswer || '')
         setShowResult(false)
         setAiExplanation('')
-        setFocusedOptionIndex(0)
+        setFocusedOptionIndex(-1)
         questionStartRef.current = Date.now()
       } else {
         // Last question in exam mode, trigger finish
@@ -382,11 +382,13 @@ const QuizPage: React.FC = () => {
         // 空格或Enter键选中多选题
         if ((e.key === ' ' || e.key === 'Enter') && isMultiple && !e.ctrlKey && !e.metaKey) {
           e.preventDefault()
-          const letter = String.fromCharCode(65 + focusedOptionIndex)
-          if (userAnswer.includes(letter)) {
-            setUserAnswer(userAnswer.replace(letter, ''))
-          } else {
-            setUserAnswer(userAnswer.split('').concat(letter).sort().join(''))
+          if (focusedOptionIndex >= 0) {
+            const letter = String.fromCharCode(65 + focusedOptionIndex)
+            if (userAnswer.includes(letter)) {
+              setUserAnswer(userAnswer.replace(letter, ''))
+            } else {
+              setUserAnswer(userAnswer.split('').concat(letter).sort().join(''))
+            }
           }
           if (e.key === 'Enter') return // 如果是Enter，阻断向下执行，防止触发提交
         }
