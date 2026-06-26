@@ -267,7 +267,7 @@ const WrongBook: React.FC = () => {
         bordered={false}
         style={{ borderRadius: 14 }}
         title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, whiteSpace: 'normal', padding: '8px 0' }}>
             <span style={{ color: '#e2e8f0', fontWeight: 600 }}>错题列表</span>
             <Select
               value={selectedType}
