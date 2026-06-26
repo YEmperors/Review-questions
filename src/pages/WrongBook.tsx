@@ -353,7 +353,7 @@ const WrongBook: React.FC = () => {
               style: { marginTop: 12 }
             }}
             size="small"
-            scroll={{ x: 600, y: 500 }}
+            scroll={{ x: 850, y: 500 }}
             style={{ marginTop: -8 }}
           />
         ) : (
