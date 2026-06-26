@@ -942,7 +942,7 @@ D. 黄瓜
         dataSource={questions}
         pagination={{ defaultPageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: total => `共 ${total} 条` }}
         size="small"
-        scroll={{ y: 500 }}
+        scroll={{ x: 850, y: 500 }}
       />
 
       {/* 新建题库弹窗 */}

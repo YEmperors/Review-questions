@@ -290,7 +290,7 @@ const Favorites: React.FC = () => {
               style: { padding: '12px 20px 0' }
             }}
             size="small"
-            scroll={{ y: 500 }}
+            scroll={{ x: 850, y: 500 }}
             locale={{ emptyText: <Empty description={<span style={{ color: '#64748b' }}>没有符合条件的题目</span>} /> }}
           />
         </Card>
