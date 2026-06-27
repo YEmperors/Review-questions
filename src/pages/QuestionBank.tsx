@@ -7,7 +7,7 @@ import type { MenuProps } from 'antd'
 import {
   PlusOutlined, UploadOutlined, DeleteOutlined, EditOutlined,
   DatabaseOutlined, DownloadOutlined, StarOutlined, StarFilled, PlayCircleOutlined, SearchOutlined,
-  WechatOutlined, FileSearchOutlined
+  WechatOutlined, FileSearchOutlined, FolderOpenOutlined
 } from '@ant-design/icons'
 import * as XLSX from 'xlsx'
 import mammoth from 'mammoth'
