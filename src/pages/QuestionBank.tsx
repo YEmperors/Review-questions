@@ -948,7 +948,7 @@ D. 黄瓜
       {/* 筛选栏 */}
       <Card size="small" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-          <Space>
+          <Space wrap>
           <Text>题型：</Text>
           <Select
             value={filterType}
@@ -976,7 +976,7 @@ D. 黄瓜
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {selectedRowKeys.length > 0 && (
-              <Space>
+              <Space wrap>
                 <Button type="primary" style={{ background: '#10b981', borderColor: '#10b981' }} icon={<PlayCircleOutlined />} onClick={handlePracticeSelected}>
                   练习选中 ({selectedRowKeys.length})
                 </Button>
@@ -1019,7 +1019,7 @@ D. 黄瓜
         rowKey="id"
         columns={columns}
         dataSource={questions}
-        pagination={{ defaultPageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: total => `共 ${total} 条` }}
+        pagination={{ size: 'small', defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'], showTotal: total => `共 ${total} 条` }}
         size="small"
         scroll={{ x: 850, y: 500 }}
       />

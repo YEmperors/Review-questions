@@ -175,7 +175,7 @@ const Favorites: React.FC = () => {
             已收藏 {allQuestions.length} 道题目
           </Text>
         </div>
-        <Space>
+        <Space wrap>
           <Popconfirm
             title="确定要清空收藏夹吗？"
             onConfirm={() => {
@@ -305,11 +305,12 @@ const Favorites: React.FC = () => {
             columns={columns}
             dataSource={questions}
             pagination={{
-              defaultPageSize: 20,
+              size: 'small',
+              defaultPageSize: 10,
               showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50', '100'],
+              pageSizeOptions: ['5', '10', '20', '50', '100'],
               showTotal: total => `共 ${total} 条`,
-              style: { padding: '12px 20px 0' }
+              style: { padding: '8px 12px 0' }
             }}
             size="small"
             scroll={{ x: 850, y: 500 }}
