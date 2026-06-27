@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import {
   Card, Table, Button, Modal, Form, Input, Select, Tag, Space,
-  Upload, message, Popconfirm, Row, Col, Typography, Radio, Dropdown, FloatButton, Switch
+  Upload, message, Popconfirm, Row, Col, Typography, Radio, Dropdown, FloatButton, Switch, List
 } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   PlusOutlined, UploadOutlined, DeleteOutlined, EditOutlined,
-  DatabaseOutlined, DownloadOutlined, StarOutlined, StarFilled, PlayCircleOutlined, SearchOutlined
+  DatabaseOutlined, DownloadOutlined, StarOutlined, StarFilled, PlayCircleOutlined, SearchOutlined,
+  WechatOutlined, FileSearchOutlined
 } from '@ant-design/icons'
 import * as XLSX from 'xlsx'
 import mammoth from 'mammoth'
@@ -35,7 +36,16 @@ const diffLabels: Record<number, { text: string; color: string }> = {
   2: { text: '中等', color: 'blue' },
   3: { text: '困难', color: 'red' }
 }
+const isCapacitor = !(window as any).__TAURI__ && !!(window as any).Capacitor
 
+const normalizePath = (p: string): string => {
+  if (!p) return ''
+  let normalized = p.trim().replace(/\//g, '\\')
+  while (normalized.endsWith('\\')) {
+    normalized = normalized.slice(0, -1)
+  }
+  return normalized
+}
 const QuestionBankPage: React.FC = () => {
   const navigate = useNavigate()
   const [banks, setBanks] = useState<QuestionBank[]>([])
@@ -58,6 +68,11 @@ const QuestionBankPage: React.FC = () => {
   const [shuffleOptions, setShuffleOptions] = useState(false)
   const [importBankId, setImportBankId] = useState<number>(1)
   const [isDragging, setIsDragging] = useState(false)
+
+  // 手机端微信、QQ文件扫描状态
+  const [mobileScanModalVisible, setMobileScanModalVisible] = useState(false)
+  const [scannedFiles, setScannedFiles] = useState<any[]>([])
+  const [scanning, setScanning] = useState(false)
   const dragCounter = React.useRef(0)
 
   const refreshFavorites = () => {
@@ -589,6 +604,116 @@ const QuestionBankPage: React.FC = () => {
     return false
   }
 
+  const handleScanMobileFiles = async () => {
+    if (!isCapacitor) return
+    
+    setScanning(true)
+    setScannedFiles([])
+    setMobileScanModalVisible(true)
+    
+    try {
+      const { Filesystem, Directory } = await import('@capacitor/filesystem')
+      
+      const perm = await Filesystem.requestPermissions()
+      if (perm.publicStorage !== 'granted') {
+        message.warning('需要获得外部存储读取权限才能扫描文件')
+        setScanning(false)
+        return
+      }
+      
+      const scanTargets = [
+        { path: 'Download/WeiXin', source: '微信' },
+        { path: 'Download/QQ', source: 'QQ' },
+        { path: 'tencent/MicroMsg/Download', source: '微信' },
+        { path: 'tencent/QQfile_recv', source: 'QQ' },
+        { path: 'Download', source: '下载目录' }
+      ]
+      
+      const filesFound: any[] = []
+      
+      for (const target of scanTargets) {
+        try {
+          const res = await Filesystem.readdir({
+            path: target.path,
+            directory: Directory.External
+          })
+          
+          if (res && res.files) {
+            res.files.forEach(file => {
+              if (file.type === 'file') {
+                const lowerName = file.name.toLowerCase()
+                if (
+                  lowerName.endsWith('.xlsx') || 
+                  lowerName.endsWith('.xls') || 
+                  lowerName.endsWith('.txt') || 
+                  lowerName.endsWith('.json') ||
+                  lowerName.endsWith('.docx')
+                ) {
+                  filesFound.push({
+                    name: file.name,
+                    path: `${target.path}/${file.name}`,
+                    size: file.size || 0,
+                    mtime: file.mtime,
+                    source: target.source
+                  })
+                }
+              }
+            })
+          }
+        } catch (e) {
+          console.log(`跳过目录 ${target.path}:`, e)
+        }
+      }
+      
+      filesFound.sort((a, b) => (b.mtime || 0) - (a.mtime || 0))
+      setScannedFiles(filesFound)
+    } catch (err) {
+      console.error(err)
+      message.error('扫描手机文件失败')
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  const handleImportMobileFile = async (file: any) => {
+    try {
+      message.loading({ content: '正在读取并解析文件...', key: 'mobile_import' })
+      const { Filesystem, Directory } = await import('@capacitor/filesystem')
+      
+      const readRes = await Filesystem.readFile({
+        path: file.path,
+        directory: Directory.External
+      })
+      
+      const base64Data = readRes.data
+      
+      const byteCharacters = atob(base64Data as string)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      const byteArray = new Uint8Array(byteNumbers)
+      
+      let mimeType = 'application/octet-stream'
+      if (file.name.endsWith('.xlsx')) mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      else if (file.name.endsWith('.xls')) mimeType = 'application/vnd.ms-excel'
+      else if (file.name.endsWith('.txt')) mimeType = 'text/plain'
+      else if (file.name.endsWith('.json')) mimeType = 'application/json'
+      else if (file.name.endsWith('.docx')) mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+      const mockFile = new File([byteArray], file.name, { type: mimeType })
+      
+      message.destroy('mobile_import')
+      await handleImport(mockFile)
+      
+      setMobileScanModalVisible(false)
+    } catch (err) {
+      console.error(err)
+      message.destroy('mobile_import')
+      message.error('读取或解析手机文件失败')
+    }
+  }
+
   const mapImportType = (type: string): QuestionType => {
     const map: Record<string, QuestionType> = {
       '单选': QuestionType.SINGLE, '单选题': QuestionType.SINGLE, 'single': QuestionType.SINGLE,
@@ -1050,7 +1175,6 @@ D. 黄瓜
         footer={null}
         width={680}
       >
-        {/* 题库选择 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <Text style={{ whiteSpace: 'nowrap', fontSize: 13 }}>导入至题库：</Text>
           <Select value={importBankId} onChange={setImportBankId} style={{ flex: 1 }} placeholder="请选择题库" size="small">
@@ -1115,6 +1239,24 @@ C.选项三  D.选项四
                 <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>Word · Excel · CSV · JSON · TXT</p>
               </div>
             </Upload.Dragger>
+            {isCapacitor && (
+              <Button
+                type="primary"
+                icon={<WechatOutlined />}
+                onClick={handleScanMobileFiles}
+                style={{
+                  width: '100%',
+                  marginTop: 12,
+                  height: 38,
+                  borderRadius: 8,
+                  background: 'linear-gradient(135deg, #1aad19, #07c160)',
+                  border: 'none',
+                  fontWeight: 500
+                }}
+              >
+                微信/QQ 接收文件一键导入
+              </Button>
+            )}
             <Dropdown menu={{ items: exportMenuItems }} placement="bottomCenter">
               <Button
                 type="link"
@@ -1163,6 +1305,70 @@ C.选项三  D.选项四
               unCheckedChildren="关闭"
             />
           </div>
+        </div>
+      </Modal>
+
+      {/* 手机端微信/QQ文件扫描导入 Modal */}
+      <Modal
+        title={<span style={{ color: '#e2e8f0' }}><WechatOutlined /> 微信/QQ 接收文件一键导入</span>}
+        open={mobileScanModalVisible}
+        onCancel={() => setMobileScanModalVisible(false)}
+        footer={null}
+        width={500}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ marginBottom: 16 }}>
+            <Text style={{ color: '#94a3b8', fontSize: 13 }}>
+              自动扫描手机上由微信、QQ 接收的文档（支持 .xlsx, .xls, .txt, .json, .docx 格式）。
+            </Text>
+          </div>
+          <List
+            loading={scanning}
+            dataSource={scannedFiles}
+            renderItem={(file: any) => {
+              const sizeInKb = (file.size / 1024).toFixed(1)
+              const timeStr = file.mtime ? new Date(file.mtime).toLocaleString() : ''
+              return (
+                <List.Item
+                  actions={[
+                    <Button 
+                      type="primary" 
+                      size="small" 
+                      onClick={() => handleImportMobileFile(file)}
+                      style={{ borderRadius: 6 }}
+                    >
+                      导入
+                    </Button>
+                  ]}
+                  style={{
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    padding: '12px 4px'
+                  }}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 8,
+                        background: file.source === '微信' ? 'rgba(26,173,25,0.15)' : 'rgba(18,183,245,0.15)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: file.source === '微信' ? '#1aad19' : '#12b7f5',
+                        fontSize: 18, fontWeight: 700
+                      }}>
+                        {file.source === '微信' ? '微' : 'Q'}
+                      </div>
+                    }
+                    title={<span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 13, wordBreak: 'break-all' }}>{file.name}</span>}
+                    description={
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                        大小：{sizeInKb} KB &nbsp;•&nbsp; 接收时间：{timeStr}
+                      </div>
+                    }
+                  />
+                </List.Item>
+              )
+            }}
+            style={{ maxHeight: 400, overflowY: 'auto' }}
+          />
         </div>
       </Modal>
 
