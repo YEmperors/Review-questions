@@ -31,6 +31,7 @@ const Settings: React.FC = () => {
   const [saved, setSaved] = useState(false)
   const [dbPath, setDbPath] = useState<string>('浏览器缓存 (网页端)')
   const [dbHistory, setDbHistory] = useState<string[]>([])
+  const [defaultDbDir, setDefaultDbDir] = useState<string>('')
 
   useEffect(() => {
     loadSettings()
@@ -42,6 +43,7 @@ const Settings: React.FC = () => {
       try {
         const custom = localStorage.getItem('APP_DB_DIR')
         const defaultDir = await appDataDir()
+        setDefaultDbDir(defaultDir)
         const dir = custom || defaultDir
         const path = await join(dir, 'smart-quiz.db')
         setDbPath(path)
@@ -104,6 +106,32 @@ const Settings: React.FC = () => {
     message.success('存储位置已切换，即将重启应用加载新数据', 1.5).then(() => {
       window.location.reload()
     })
+  }
+
+  const handleDeleteHistoryDir = async (dirToDelete: string) => {
+    try {
+      let history: string[] = []
+      const storedHistory = localStorage.getItem('APP_DB_DIR_HISTORY')
+      if (storedHistory) {
+        history = JSON.parse(storedHistory)
+      }
+      
+      const newHistory = history.filter(h => normalizePath(h).toLowerCase() !== normalizePath(dirToDelete).toLowerCase())
+      localStorage.setItem('APP_DB_DIR_HISTORY', JSON.stringify(newHistory))
+      
+      const custom = localStorage.getItem('APP_DB_DIR')
+      if (custom && normalizePath(custom).toLowerCase() === normalizePath(dirToDelete).toLowerCase()) {
+        localStorage.removeItem('APP_DB_DIR')
+        message.success('已删除当前路径，数据存储位置已恢复为系统默认', 1.5).then(() => {
+          window.location.reload()
+        })
+      } else {
+        message.success('已从历史记录中移除该路径')
+        await loadDbPath()
+      }
+    } catch (e) {
+      message.error('删除历史路径失败')
+    }
   }
 
   const handleRestoreDefaultDbPath = async () => {
@@ -371,7 +399,25 @@ const Settings: React.FC = () => {
                         >
                           {dbHistory.map(dir => {
                             const p = dir + (dir.endsWith('\\') || dir.endsWith('/') ? '' : '\\') + 'smart-quiz.db'
-                            return <Option key={dir} value={p}>{p}</Option>
+                            const isDefault = defaultDbDir && normalizePath(dir).toLowerCase() === normalizePath(defaultDbDir).toLowerCase()
+                            return (
+                              <Option key={dir} value={p}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 16 }}>
+                                    {p}
+                                  </span>
+                                  {!isDefault && (
+                                    <DeleteOutlined 
+                                      style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: 12 }} 
+                                      onClick={async (e) => {
+                                        e.stopPropagation()
+                                        await handleDeleteHistoryDir(dir)
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              </Option>
+                            )
                           })}
                         </Select>
                       ) : (
