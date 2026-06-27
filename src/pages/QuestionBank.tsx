@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   Card, Table, Button, Modal, Form, Input, Select, Tag, Space,
-  Upload, message, Popconfirm, Row, Col, Typography, Radio, Dropdown, FloatButton
+  Upload, message, Popconfirm, Row, Col, Typography, Radio, Dropdown, FloatButton, Switch
 } from 'antd'
 import type { MenuProps } from 'antd'
 import {
@@ -53,6 +53,9 @@ const QuestionBankPage: React.FC = () => {
   const [searchText, setSearchText] = useState('')
   const [favSet, setFavSet] = useState<Set<number>>(new Set())
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [practiceModalVisible, setPracticeModalVisible] = useState(false)
+  const [shuffleQuestions, setShuffleQuestions] = useState(false)
+  const [shuffleOptions, setShuffleOptions] = useState(false)
   const [importBankId, setImportBankId] = useState<number>(1)
   const [isDragging, setIsDragging] = useState(false)
   const dragCounter = React.useRef(0)
@@ -263,10 +266,25 @@ const QuestionBankPage: React.FC = () => {
 
   const handlePracticeSelected = () => {
     if (selectedRowKeys.length === 0) return
-    const selectedQuestions = questions.filter(q => selectedRowKeys.includes(q.id))
-    sessionStorage.setItem('quiz_config', JSON.stringify({ mode: 'practice', timeLimit: null }))
+    setPracticeModalVisible(true)
+  }
+
+  const handlePracticeConfirm = () => {
+    if (selectedRowKeys.length === 0) return
+    let selectedQuestions = questions.filter(q => selectedRowKeys.includes(q.id))
+    
+    if (shuffleQuestions) {
+      selectedQuestions = [...selectedQuestions].sort(() => Math.random() - 0.5)
+    }
+
+    sessionStorage.setItem('quiz_config', JSON.stringify({
+      mode: 'practice',
+      timeLimit: null,
+      shuffleOptions: shuffleOptions
+    }))
     sessionStorage.setItem('quiz_questions', JSON.stringify(selectedQuestions))
     sessionStorage.removeItem('quiz_results')
+    setPracticeModalVisible(false)
     navigate('/quiz')
   }
 
@@ -1108,6 +1126,44 @@ C.选项三  D.选项四
             </Dropdown>
           </Col>
         </Row>
+      </Modal>
+ 
+      {/* 练习选项配置 Modal */}
+      <Modal
+        title={<span style={{ color: '#e2e8f0' }}>开始练习配置</span>}
+        open={practiceModalVisible}
+        onOk={handlePracticeConfirm}
+        onCancel={() => setPracticeModalVisible(false)}
+        okText="开始练习"
+        cancelText="取消"
+        width={360}
+      >
+        <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#e2e8f0' }}>打乱题目顺序</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>打乱所选题目的做题顺序</div>
+            </div>
+            <Switch
+              checked={shuffleQuestions}
+              onChange={setShuffleQuestions}
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#e2e8f0' }}>打乱选项顺序</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>打乱选择题的选项展示顺序</div>
+            </div>
+            <Switch
+              checked={shuffleOptions}
+              onChange={setShuffleOptions}
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+            />
+          </div>
+        </div>
       </Modal>
 
       <FloatButton.BackTop style={{ right: '50%', transform: 'translateX(50%)', bottom: 24 }} visibilityHeight={100} target={() => document.querySelector('.ant-table-body') || window as any} />

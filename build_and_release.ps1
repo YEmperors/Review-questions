@@ -3,7 +3,8 @@ $ErrorActionPreference = "Stop"
 Write-Host "Building Tauri app..."
 npm run tauri build
 
-$version = "0.1.13"
+$packageJson = Get-Content -Raw -Path "package.json" | ConvertFrom-Json
+$version = $packageJson.version
 $targetDir = "src-tauri\target\release"
 $standaloneExe = "$targetDir\smart-quiz-app.exe"
 $portableZip = "smart-quiz-app-portable-v$version.zip"

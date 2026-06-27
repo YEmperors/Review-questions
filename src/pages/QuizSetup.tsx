@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Card, Form, Select, Button, InputNumber, Radio,
-  Space, Typography, Row, Col, Tag, message, Divider
+  Space, Typography, Row, Col, Tag, message, Divider, Switch
 } from 'antd'
 import {
   ThunderboltOutlined, ExperimentOutlined, RedoOutlined,
@@ -114,7 +114,8 @@ const QuizSetup: React.FC = () => {
 
       sessionStorage.setItem('quiz_config', JSON.stringify({
         mode,
-        timeLimit: values.timeLimit || null
+        timeLimit: values.timeLimit || null,
+        shuffleOptions: !!values.shuffleOptions
       }))
       sessionStorage.setItem('quiz_questions', JSON.stringify(questions))
       sessionStorage.removeItem('quiz_results')
@@ -143,7 +144,7 @@ const QuizSetup: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ mode: 'practice', questionCount: 20 }}
+          initialValues={{ mode: 'practice', questionCount: 20, shuffleOptions: false }}
           onValuesChange={(changed) => {
             if (changed.mode) {
               setSelectedMode(changed.mode)
@@ -245,6 +246,11 @@ const QuizSetup: React.FC = () => {
                     min={1} max={300} style={{ width: '100%', borderRadius: 8 }}
                     placeholder="不限时"
                   />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
+                <Form.Item name="shuffleOptions" valuePropName="checked" label={<span style={{ color: '#94a3b8' }}>打乱选项</span>} style={{ marginBottom: 16 }}>
+                  <Switch checkedChildren="开启" unCheckedChildren="关闭" style={{ marginTop: 4 }} />
                 </Form.Item>
               </Col>
             </Row>

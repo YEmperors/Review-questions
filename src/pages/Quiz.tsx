@@ -49,6 +49,7 @@ const QuizPage: React.FC = () => {
   const [aiLoading, setAiLoading] = useState(false)
   const [starred, setStarred] = useState(false)
   const [focusedOptionIndex, setFocusedOptionIndex] = useState<number>(-1)
+  const [shuffledMaps, setShuffledMaps] = useState<number[][]>([])
   const questionStartRef = useRef(Date.now())
 
   // 当题目切换时，重置聚焦索引
@@ -69,6 +70,27 @@ const QuizPage: React.FC = () => {
       setTimeLimit(config.timeLimit || null)
       setQuestions(qs)
       setResults(new Array(qs.length).fill(null))
+
+      // 生成打乱选项映射表
+      const maps = qs.map((q: Question) => {
+        if ((q.type === 'single' || q.type === 'multiple') && q.options) {
+          try {
+            const opts = JSON.parse(q.options)
+            if (opts.length > 1) {
+              const arr = Array.from({ length: opts.length }, (_, i) => i)
+              if (config.shuffleOptions) {
+                for (let i = arr.length - 1; i > 0; i--) {
+                  const j = Math.floor(Math.random() * (i + 1));
+                  [arr[i], arr[j]] = [arr[j], arr[i]]
+                }
+              }
+              return arr
+            }
+          } catch {}
+        }
+        return []
+      })
+      setShuffledMaps(maps)
     } catch {
       navigate('/quiz-setup')
     }
@@ -283,6 +305,7 @@ const QuizPage: React.FC = () => {
   }, [questions, currentIndex])
 
   const currentQuestion = questions[currentIndex]
+  const currentMap = shuffledMaps[currentIndex] || []
   const progress = questions.length > 0 ? Math.round((currentIndex / questions.length) * 100) : 0
 
   // 键盘快捷键
@@ -355,19 +378,24 @@ const QuizPage: React.FC = () => {
         const options = getOptions(currentQuestion)
         const isSingle = ['single', 'judge'].includes(currentQuestion.type)
         const isMultiple = currentQuestion.type === 'multiple'
+        const currentMap = shuffledMaps[currentIndex] || []
 
         // 方向键
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
           e.preventDefault()
           if (isSingle) {
-            const currentIdx = userAnswer ? userAnswer.charCodeAt(0) - 65 : -1
-            let newIdx = 0
+            const origIdx = userAnswer ? userAnswer.charCodeAt(0) - 65 : -1
+            const uiIdx = (currentQuestion.type !== 'judge' && currentMap.length > 0) ? currentMap.indexOf(origIdx) : origIdx
+            
+            let newUiIdx = 0
             if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-              newIdx = currentIdx < options.length - 1 ? currentIdx + 1 : 0
+              newUiIdx = uiIdx < options.length - 1 ? uiIdx + 1 : 0
             } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-              newIdx = currentIdx > 0 ? currentIdx - 1 : options.length - 1
+              newUiIdx = uiIdx > 0 ? uiIdx - 1 : options.length - 1
             }
-            setUserAnswer(String.fromCharCode(65 + newIdx))
+            
+            const newOrigIdx = (currentQuestion.type !== 'judge' && currentMap.length > 0) ? currentMap[newUiIdx] : newUiIdx
+            setUserAnswer(String.fromCharCode(65 + newOrigIdx))
           } else if (isMultiple) {
             let newIdx = focusedOptionIndex
             if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
@@ -383,7 +411,8 @@ const QuizPage: React.FC = () => {
         if ((e.key === ' ' || e.key === 'Enter') && isMultiple && !e.ctrlKey && !e.metaKey) {
           e.preventDefault()
           if (focusedOptionIndex >= 0) {
-            const letter = String.fromCharCode(65 + focusedOptionIndex)
+            const origIdx = (currentMap.length > 0) ? currentMap[focusedOptionIndex] : focusedOptionIndex
+            const letter = String.fromCharCode(65 + origIdx)
             if (userAnswer.includes(letter)) {
               setUserAnswer(userAnswer.replace(letter, ''))
             } else {
@@ -410,7 +439,7 @@ const QuizPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showResult, currentQuestion, userAnswer, handleSubmit, handleNext, handleQuit, focusedOptionIndex])
+  }, [showResult, currentQuestion, userAnswer, handleSubmit, handleNext, handleQuit, focusedOptionIndex, shuffledMaps, currentIndex])
 
   const formatTime = (seconds: number): string => {
     const m = Math.floor(seconds / 60)
@@ -564,41 +593,51 @@ const QuizPage: React.FC = () => {
                 style={{ width: '100%' }}
               >
                 <Space direction="vertical" style={{ width: '100%' }} size={10}>
-                  {getOptions(currentQuestion).map((opt, idx) => {
-                    const letter = String.fromCharCode(65 + idx)
-                    const isSelected = userAnswer === letter
-                    return (
-                      <Radio
-                        key={idx}
-                        value={letter}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          borderRadius: 10,
-                          border: `1px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
-                          background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)',
-                          transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
-                          cursor: 'pointer',
-                          margin: 0,
-                        }}
-                      >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{
-                            width: 24, height: 24, borderRadius: 6,
-                            background: isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)',
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 12, fontWeight: 600,
-                            color: isSelected ? '#fff' : '#94a3b8',
-                            flexShrink: 0,
+                  {(() => {
+                    const originalOptions = getOptions(currentQuestion)
+                    const displayOptions = (currentQuestion.type !== 'judge' && currentMap.length > 0)
+                      ? currentMap.map(idx => originalOptions[idx])
+                      : originalOptions
+                    
+                    return displayOptions.map((opt, idx) => {
+                      const uiLetter = String.fromCharCode(65 + idx)
+                      const origIdx = (currentQuestion.type !== 'judge' && currentMap.length > 0) ? currentMap[idx] : idx
+                      const origLetter = String.fromCharCode(65 + origIdx)
+                      const isSelected = userAnswer === origLetter
+                      
+                      return (
+                        <Radio
+                          key={idx}
+                          value={origLetter}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            borderRadius: 10,
+                            border: `1px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
+                            background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)',
                             transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
-                          }}>
-                            {letter}
+                            cursor: 'pointer',
+                            margin: 0,
+                          }}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{
+                              width: 24, height: 24, borderRadius: 6,
+                              background: isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 12, fontWeight: 600,
+                              color: isSelected ? '#fff' : '#94a3b8',
+                              flexShrink: 0,
+                              transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
+                            }}>
+                              {uiLetter}
+                            </span>
+                            <span style={{ color: '#cbd5e1' }}>{opt}</span>
                           </span>
-                          <span style={{ color: '#cbd5e1' }}>{opt}</span>
-                        </span>
-                      </Radio>
-                    )
-                  })}
+                        </Radio>
+                      )
+                    })
+                  })()}
                 </Space>
               </Radio.Group>
             )}
@@ -610,41 +649,51 @@ const QuizPage: React.FC = () => {
                 style={{ width: '100%' }}
               >
                 <Space direction="vertical" style={{ width: '100%' }} size={10}>
-                  {getOptions(currentQuestion).map((opt, idx) => {
-                    const letter = String.fromCharCode(65 + idx)
-                    const isChecked = userAnswer.includes(letter)
-                    return (
-                      <Checkbox
-                        key={idx}
-                        value={letter}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          borderRadius: 10,
-                          border: `1px solid ${isChecked ? '#8b5cf6' : (focusedOptionIndex === idx ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.08)')}`,
-                          background: isChecked ? 'rgba(139,92,246,0.12)' : (focusedOptionIndex === idx ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'),
-                          boxShadow: focusedOptionIndex === idx ? '0 0 0 2px rgba(139,92,246,0.2)' : 'none',
-                          transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
-                          margin: 0,
-                        }}
-                      >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{
-                            width: 24, height: 24, borderRadius: 6,
-                            background: isChecked ? '#8b5cf6' : 'rgba(255,255,255,0.08)',
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 12, fontWeight: 600,
-                            color: isChecked ? '#fff' : '#94a3b8',
-                            flexShrink: 0,
+                  {(() => {
+                    const originalOptions = getOptions(currentQuestion)
+                    const displayOptions = currentMap.length > 0
+                      ? currentMap.map(idx => originalOptions[idx])
+                      : originalOptions
+                    
+                    return displayOptions.map((opt, idx) => {
+                      const uiLetter = String.fromCharCode(65 + idx)
+                      const origIdx = currentMap.length > 0 ? currentMap[idx] : idx
+                      const origLetter = String.fromCharCode(65 + origIdx)
+                      const isChecked = userAnswer.includes(origLetter)
+                      
+                      return (
+                        <Checkbox
+                          key={idx}
+                          value={origLetter}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            borderRadius: 10,
+                            border: `1px solid ${isChecked ? '#8b5cf6' : (focusedOptionIndex === idx ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.08)')}`,
+                            background: isChecked ? 'rgba(139,92,246,0.12)' : (focusedOptionIndex === idx ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'),
+                            boxShadow: focusedOptionIndex === idx ? '0 0 0 2px rgba(139,92,246,0.2)' : 'none',
                             transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
-                          }}>
-                            {letter}
+                            margin: 0,
+                          }}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{
+                              width: 24, height: 24, borderRadius: 6,
+                              background: isChecked ? '#8b5cf6' : 'rgba(255,255,255,0.08)',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 12, fontWeight: 600,
+                              color: isChecked ? '#fff' : '#94a3b8',
+                              flexShrink: 0,
+                              transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
+                            }}>
+                              {uiLetter}
+                            </span>
+                            <span style={{ color: '#cbd5e1' }}>{opt}</span>
                           </span>
-                          <span style={{ color: '#cbd5e1' }}>{opt}</span>
-                        </span>
-                      </Checkbox>
-                    )
-                  })}
+                        </Checkbox>
+                      )
+                    })
+                  })()}
                 </Space>
               </Checkbox.Group>
             )}

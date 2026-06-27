@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   Card, Table, Tag, Space, Button, Select, Typography,
-  Empty, Modal, Tooltip, Row, Col, Statistic, List, Popconfirm, message, FloatButton, Input
+  Empty, Modal, Tooltip, Row, Col, Statistic, List, Popconfirm, message, FloatButton, Input, Switch
 } from 'antd'
 import {
   CloseCircleOutlined, RedoOutlined,
@@ -38,6 +38,10 @@ const WrongBook: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string | undefined>(undefined)
   const [searchText, setSearchText] = useState('')
   const [weakKps, setWeakKps] = useState<{ knowledge_point: string; total: number; correct: number; rate: number }[]>([])
+  const [practiceModalVisible, setPracticeModalVisible] = useState(false)
+  const [shuffleQuestions, setShuffleQuestions] = useState(false)
+  const [shuffleOptions, setShuffleOptions] = useState(false)
+  const [practiceType, setPracticeType] = useState<'all' | 'due'>('all')
 
   const loadData = useCallback(() => {
     setWrongRecords(getWrongQuestionsWithQuestions(selectedType, searchText))
@@ -73,16 +77,36 @@ const WrongBook: React.FC = () => {
 
   const handleReviewWrong = () => {
     if (wrongRecords.length === 0) return
-    const questions = wrongRecords.map(r => r.question)
-    sessionStorage.setItem('quiz_config', JSON.stringify({ mode: 'review', timeLimit: null }))
-    sessionStorage.setItem('quiz_questions', JSON.stringify(questions))
-    navigate('/quiz')
+    setPracticeType('all')
+    setPracticeModalVisible(true)
   }
 
   const handleReviewDue = () => {
     if (dueQuestions.length === 0) return
-    sessionStorage.setItem('quiz_config', JSON.stringify({ mode: 'review', timeLimit: null }))
-    sessionStorage.setItem('quiz_questions', JSON.stringify(dueQuestions))
+    setPracticeType('due')
+    setPracticeModalVisible(true)
+  }
+
+  const handlePracticeConfirm = () => {
+    let targetQuestions: Question[] = []
+    if (practiceType === 'all') {
+      targetQuestions = wrongRecords.map(r => r.question)
+    } else {
+      targetQuestions = [...dueQuestions]
+    }
+
+    if (shuffleQuestions) {
+      targetQuestions = [...targetQuestions].sort(() => Math.random() - 0.5)
+    }
+
+    sessionStorage.setItem('quiz_config', JSON.stringify({
+      mode: 'review',
+      timeLimit: null,
+      shuffleOptions: shuffleOptions
+    }))
+    sessionStorage.setItem('quiz_questions', JSON.stringify(targetQuestions))
+    sessionStorage.removeItem('quiz_results')
+    setPracticeModalVisible(false)
     navigate('/quiz')
   }
 
@@ -422,6 +446,44 @@ const WrongBook: React.FC = () => {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* 练习选项配置 Modal */}
+      <Modal
+        title={<span style={{ color: '#e2e8f0' }}>开始练习配置</span>}
+        open={practiceModalVisible}
+        onOk={handlePracticeConfirm}
+        onCancel={() => setPracticeModalVisible(false)}
+        okText="开始练习"
+        cancelText="取消"
+        width={360}
+      >
+        <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#e2e8f0' }}>打乱题目顺序</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>打乱所选题目的做题顺序</div>
+            </div>
+            <Switch
+              checked={shuffleQuestions}
+              onChange={setShuffleQuestions}
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#e2e8f0' }}>打乱选项顺序</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>打乱选择题的选项展示顺序</div>
+            </div>
+            <Switch
+              checked={shuffleOptions}
+              onChange={setShuffleOptions}
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+            />
+          </div>
+        </div>
       </Modal>
 
       <FloatButton.BackTop style={{ right: '50%', transform: 'translateX(50%)', bottom: 24 }} visibilityHeight={100} target={() => document.querySelector('.ant-table-body') || window as any} />

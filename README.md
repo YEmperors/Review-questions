@@ -1,7 +1,7 @@
 # 🧠 Smart Quiz App (智能刷题系统)
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-0.1.3-success.svg)
+![Version](https://img.shields.io/badge/version-0.1.14-success.svg)
 ![React](https://img.shields.io/badge/React-18-61dafb.svg)
 ![Tauri](https://img.shields.io/badge/Tauri-2.0_Ready-ffc131.svg)
 ![Vitest](https://img.shields.io/badge/Vitest-Testing-green.svg)
@@ -21,11 +21,11 @@
 
 ---
 
-## 🚀 最新更新亮点 (v0.1.3)
+## 🚀 最新更新亮点 (v0.1.14)
 
-1. **移动端架构就绪 (Tauri v2)**：前端核心 API 及底层 CLI 工具已升级至最新的 Tauri v2 生态，为编译发布 **Android (.apk)** 和 iOS 应用做好了底层准备。
-2. **严密的自动化测试**：完善了详细的黑盒与白盒测试方案，核心“自适应抽题算法”已实现 100% 覆盖率的 Vitest 单元测试保障。
-3. **更顺滑的 UI 体验**：全应用分页器位置统一，修复了错题本和题库管理在大量数据下的滚动问题，加入了一致的智能返回顶部悬浮按钮。
+1. **智能乱序刷题支持**：在开始刷题配置中支持“打乱选项顺序”。采用先进的渲染层与存储层解耦技术，仅在 UI 层面进行选项洗牌打乱，逻辑层及存储层依然维持标准物理映射，100% 保护数据库错题记录和正确率统计的数据一致性。
+2. **多场景重做/练习乱序控制**：为题库管理“练习选中”、错题本重做错题（全部/到期）、以及答题报告“重做错题”等操作集成了统一的“开始练习配置弹窗”，允许用户自主勾选“打乱题目顺序”与“打乱选项顺序”。
+3. **移动端架构与单元测试就绪**：底层核心升级至 Tauri 2.0，为编译 Android/iOS 做好准备；核心“自适应抽题算法”已实现 100% 覆盖率的 Vitest 单元测试保障。
 
 ---
 
