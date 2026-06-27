@@ -151,8 +151,8 @@ const Settings: React.FC = () => {
           ),
           okText: '复制当前数据并切换',
           cancelText: '创建新空数据库',
-          okButtonProps: { style: { background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none' } },
-          cancelButtonProps: { style: { color: '#ffffff', fontWeight: 600, border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.1)' } },
+          okButtonProps: { type: 'primary' },
+          cancelButtonProps: { type: 'default' },
           onOk: async () => {
             await performSwitch(true)
           },
