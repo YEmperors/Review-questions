@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { appDataDir, join } from '@tauri-apps/api/path'
 import {
   Card, Form, Input, InputNumber, Select, Slider, Button, Space, Typography,
-  message, Divider, Alert, Tabs
+  message, Divider, Alert, Tabs, Modal
 } from 'antd'
 import {
   SettingOutlined, ApiOutlined, DatabaseOutlined,
@@ -156,7 +156,7 @@ const Settings: React.FC = () => {
           onOk: async () => {
             await performSwitch(true)
           },
-          onCancel: async (closeInfo) => {
+          onCancel: async (closeInfo: any) => {
             if (closeInfo && (closeInfo as any).triggerCancel) {
               return
             }
