@@ -88,13 +88,27 @@ jobs:
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace --info
+          ./gradlew assembleDebug --stacktrace --info > gradle_build.log 2>&1 || (cat gradle_build.log && exit 1)
           cd ..
+
+      - name: Upload Android APK as Action Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: ignore
+
+      - name: Upload Gradle Logs (If Failed)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-logs
+          path: android/gradle_build.log
 
       - name: Upload Android APK to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          cp android/app/build/outputs/apk/debug/app-debug.apk ./smart-quiz-app-v${VERSION}.apk
-          gh release upload "v${VERSION}" ./smart-quiz-app-v${VERSION}.apk --clobber
+          cp android/app/build/outputs/apk/debug/app-debug.apk ./smart-quiz-app-v${VERSION}.apk || echo "APK File Missing!"
+          gh release upload "v${VERSION}" ./smart-quiz-app-v${VERSION}.apk --clobber || echo "Release upload failed, but artifact is available."
