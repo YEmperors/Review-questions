@@ -84,7 +84,7 @@
 /* 响应式调整 */
 @media (max-width: 768px) {
   .responsive-content-padding {
-    padding: 16px 12px !important;
+    /* 删除 padding 重置，交由 MainLayout 内联计算 */
   }
 }
 

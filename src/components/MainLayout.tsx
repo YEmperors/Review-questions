@@ -207,7 +207,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             borderBottom: '1px solid rgba(255,255,255,0.06)',
             display: 'flex',
             alignItems: 'center',
-            padding: '0 16px',
+            paddingRight: 16,
+            paddingLeft: 16,
             position: 'fixed',
             top: 0,
             left: 0,
@@ -328,7 +329,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           margin: 0,
           paddingTop: isMobile ? 96 : 24,
           paddingRight: isMobile ? 12 : 28,
-          paddingBottom: isMobile ? 24 : 24,
+          paddingBottom: isMobile ? 48 : 24, // 为全面屏底部留出更多安全空间
           paddingLeft: isMobile ? 12 : 28,
           overflowX: 'hidden',
           overflowY: 'auto',
