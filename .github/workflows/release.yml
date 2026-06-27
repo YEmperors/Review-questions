@@ -12,6 +12,8 @@ permissions:
 jobs:
   build-tauri:
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,7 +55,10 @@ jobs:
           gh release upload "v$VERSION" smart-quiz-app-portable.zip --clobber
 
   build-android:
+    needs: build-tauri
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
