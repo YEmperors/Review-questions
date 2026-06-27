@@ -10,52 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build-tauri:
-    runs-on: windows-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
-
-      - name: Install frontend dependencies
-        run: npm install
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
-
-      - name: Build and Release Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: v__VERSION__
-          releaseName: "Smart Quiz App v__VERSION__"
-          releaseBody: "这是智能刷题客户端的最新版本。包含了 EXE 安装包、免安装 Zip 压缩包以及安卓端 APK 包。"
-          releaseDraft: false
-          prerelease: false
-
-      - name: Create Portable Zip
-        run: |
-          Compress-Archive -Path src-tauri/target/release/smart-quiz-app.exe -DestinationPath smart-quiz-app-portable.zip
-
-      - name: Upload Portable Zip to Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
-          gh release upload "v$VERSION" smart-quiz-app-portable.zip --clobber
-
   build-android:
-    needs: build-tauri
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -111,4 +66,6 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           cp android/app/build/outputs/apk/debug/app-debug.apk ./smart-quiz-app-v${VERSION}.apk || echo "APK File Missing!"
+          # 如果 Release 不存在，就先创建一个
+          gh release view "v${VERSION}" || gh release create "v${VERSION}" -t "Smart Quiz App v${VERSION}" -n "这是智能刷题客户端的最新安卓版本。"
           gh release upload "v${VERSION}" ./smart-quiz-app-v${VERSION}.apk --clobber || echo "Release upload failed, but artifact is available."
