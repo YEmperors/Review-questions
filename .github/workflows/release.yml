@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  build-tauri:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -37,7 +37,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: "Smart Quiz App v__VERSION__"
-          releaseBody: "这是智能刷题客户端的最新版本。包含了 EXE 安装包和绿色的免安装 Zip 压缩包。"
+          releaseBody: "这是智能刷题客户端的最新版本。包含了 EXE 安装包、免安装 Zip 压缩包以及安卓端 APK 包。"
           releaseDraft: false
           prerelease: false
 
@@ -52,24 +52,44 @@ jobs:
           $VERSION = (Get-Content package.json | ConvertFrom-Json).version
           gh release upload "v$VERSION" smart-quiz-app-portable.zip --clobber
 
-      - name: Setup Java JDK for Android build
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Build Web App
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync
+
       - name: Build Android APK
         run: |
-          npm run build
-          npx cap sync
           cd android
-          .\gradlew.bat assembleDebug
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
           cd ..
 
       - name: Upload Android APK to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
-          Copy-Item -Path android/app/build/outputs/apk/debug/app-debug.apk -Destination smart-quiz-app-v$VERSION.apk
-          gh release upload "v$VERSION" smart-quiz-app-v$VERSION.apk --clobber
+          VERSION=$(node -p "require('./package.json').version")
+          cp android/app/build/outputs/apk/debug/app-debug.apk ./smart-quiz-app-v${VERSION}.apk
+          gh release upload "v${VERSION}" ./smart-quiz-app-v${VERSION}.apk --clobber
