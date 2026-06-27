@@ -69,6 +69,21 @@ const App: React.FC = () => {
     }
   }
 
+  const handleSetupDocDir = async () => {
+    try {
+      const { documentDir, join } = await import('@tauri-apps/api/path')
+      const doc = await documentDir()
+      const path = await join(doc, 'SmartQuizApp')
+      localStorage.setItem('APP_DB_DIR', path)
+      localStorage.setItem('APP_INITIALIZED', '1')
+      setShowSetup(false)
+      initDb()
+    } catch (e) {
+      console.error(e)
+      msgApi.error('配置文档目录失败')
+    }
+  }
+
   // 窗口关闭前同步保存数据库
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -109,14 +124,19 @@ const App: React.FC = () => {
             <div style={{ marginTop: 8, fontFamily: 'monospace', opacity: 0.8 }}>{initError}</div>
           </div>
         ) : showSetup ? (
-          <div style={{ background: '#1e1e2e', padding: 32, borderRadius: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', maxWidth: 400, textAlign: 'center' }}>
+          <div style={{ background: '#1e1e2e', padding: 32, borderRadius: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', maxWidth: 450, textAlign: 'center' }}>
             <Typography.Title level={4} style={{ color: '#e2e8f0', marginTop: 0 }}>首次启动配置</Typography.Title>
             <Typography.Paragraph style={{ color: '#94a3b8', marginBottom: 24 }}>
-              请选择应用的数据库文件保存位置。如果不需要自定义，可以使用系统默认位置。
+              请选择您的刷题数据保存位置。推荐使用“文档目录”，便于日后查找、备份和迁移。
             </Typography.Paragraph>
-            <Space size="middle">
-              <Button onClick={handleSetupCustom}>自定义路径</Button>
-              <Button type="primary" onClick={handleSetupDefault} style={{ background: '#6366f1' }}>使用默认位置</Button>
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <Button type="primary" onClick={handleSetupDocDir} style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', width: '100%', height: 38 }}>
+                使用文档目录（推荐，便于备份）
+              </Button>
+              <div style={{ display: 'flex', gap: 12, width: '100%' }}>
+                <Button onClick={handleSetupDefault} style={{ flex: 1, height: 38 }}>系统默认位置</Button>
+                <Button onClick={handleSetupCustom} style={{ flex: 1, height: 38 }}>自定义路径</Button>
+              </div>
             </Space>
           </div>
         ) : (
