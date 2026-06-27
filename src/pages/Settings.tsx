@@ -6,7 +6,8 @@ import {
 } from 'antd'
 import {
   SettingOutlined, ApiOutlined, DatabaseOutlined,
-  SaveOutlined, CheckCircleOutlined, DownloadOutlined
+  SaveOutlined, CheckCircleOutlined, DownloadOutlined,
+  DeleteOutlined
 } from '@ant-design/icons'
 import * as XLSX from 'xlsx'
 import { updateAISettings, getAISettings, setStudyGoal, getStudyGoal, exportAllQuestions, exportAllQuizRecords, createQuestionsBatch, getQuestionBanks, createQuestionBank } from '../db/repositories'
@@ -409,7 +410,7 @@ const Settings: React.FC = () => {
                                   {!isDefault && (
                                     <DeleteOutlined 
                                       style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: 12 }} 
-                                      onClick={async (e) => {
+                                      onClick={async (e: React.MouseEvent) => {
                                         e.stopPropagation()
                                         await handleDeleteHistoryDir(dir)
                                       }}
