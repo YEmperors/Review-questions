@@ -16,6 +16,15 @@ import { exportFile } from '../utils/fileExport'
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
 
+const normalizePath = (p: string): string => {
+  if (!p) return ''
+  let normalized = p.trim().replace(/\//g, '\\')
+  while (normalized.endsWith('\\')) {
+    normalized = normalized.slice(0, -1)
+  }
+  return normalized
+}
+
 const Settings: React.FC = () => {
   const [aiForm] = Form.useForm()
   const [goalForm] = Form.useForm()
@@ -37,21 +46,34 @@ const Settings: React.FC = () => {
         const path = await join(dir, 'smart-quiz.db')
         setDbPath(path)
         
-        let history: string[] = []
+        let rawHistory: string[] = []
         try {
           const storedHistory = localStorage.getItem('APP_DB_DIR_HISTORY')
           if (storedHistory) {
-            history = JSON.parse(storedHistory)
+            rawHistory = JSON.parse(storedHistory)
           }
         } catch (e) {}
 
-        if (!history.includes(defaultDir)) {
-          history = [defaultDir, ...history]
+        const historyMap = new Map<string, string>()
+        
+        const normDefault = normalizePath(defaultDir).toLowerCase()
+        historyMap.set(normDefault, defaultDir)
+        
+        if (custom) {
+          const normCustom = normalizePath(custom).toLowerCase()
+          historyMap.set(normCustom, custom)
         }
-        if (custom && !history.includes(custom)) {
-          history = [custom, ...history]
-        }
-        setDbHistory(history)
+        
+        rawHistory.forEach(h => {
+          if (h) {
+            const normH = normalizePath(h).toLowerCase()
+            if (!historyMap.has(normH)) {
+              historyMap.set(normH, h)
+            }
+          }
+        })
+
+        setDbHistory(Array.from(historyMap.values()))
       } catch (e) { }
     }
   }
@@ -68,7 +90,10 @@ const Settings: React.FC = () => {
         if (storedHistory) history = JSON.parse(storedHistory)
       } catch (e) {}
       
-      if (!history.includes(newDir)) {
+      const normNew = normalizePath(newDir).toLowerCase()
+      const hasDuplicate = history.some(h => normalizePath(h).toLowerCase() === normNew)
+      
+      if (!hasDuplicate) {
         history = [newDir, ...history]
         localStorage.setItem('APP_DB_DIR_HISTORY', JSON.stringify(history))
       }
