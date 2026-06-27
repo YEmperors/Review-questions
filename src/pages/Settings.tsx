@@ -45,21 +45,9 @@ const Settings: React.FC = () => {
           }
         } catch (e) {}
 
-        // 默认位置 1：系统 AppData 目录
         if (!history.includes(defaultDir)) {
           history = [defaultDir, ...history]
         }
-
-        // 默认位置 2：我的文档（Documents）目录
-        try {
-          const { documentDir } = await import('@tauri-apps/api/path')
-          const docDir = await documentDir()
-          const docDefaultDir = await join(docDir, 'SmartQuizApp')
-          if (!history.includes(docDefaultDir)) {
-            history = [...history, docDefaultDir]
-          }
-        } catch (e) {}
-
         if (custom && !history.includes(custom)) {
           history = [custom, ...history]
         }
