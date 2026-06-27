@@ -606,88 +606,9 @@ const QuestionBankPage: React.FC = () => {
 
   const handleScanMobileFiles = async () => {
     if (!isCapacitor) return
-    
-    setScanning(true)
-    setScannedFiles([])
+    // 由于 Android 11+ Scoped Storage，直接扫描 Download 已不可靠
+    // 我们直接展示向导弹窗，引导用户使用系统原生文件选择器
     setMobileScanModalVisible(true)
-    
-    try {
-      const { Filesystem, Directory } = await import('@capacitor/filesystem')
-      
-      const perm = await Filesystem.requestPermissions()
-      if (perm.publicStorage !== 'granted') {
-        message.warning('需要获得外部存储读取权限才能扫描文件')
-        setScanning(false)
-        return
-      }
-      
-      const filesFound: any[] = []
-      
-      const scanDir = async (path: string, depth: number, defaultSource: string) => {
-        if (depth > 3) return // 限制递归深度，防止卡死
-        try {
-          const res = await Filesystem.readdir({
-            path: path,
-            directory: Directory.External
-          })
-          
-          if (res && res.files) {
-            for (const file of res.files) {
-              if (file.type === 'directory') {
-                const lowerName = file.name.toLowerCase()
-                // 排除一些系统和无关目录
-                if (!lowerName.startsWith('.') && !['android', 'dcim', 'movies', 'music', 'pictures', 'alarms', 'notifications', 'podcasts', 'ringtones'].includes(lowerName)) {
-                  await scanDir(`${path}/${file.name}`, depth + 1, defaultSource)
-                }
-              } else if (file.type === 'file') {
-                const lowerName = file.name.toLowerCase()
-                if (
-                  lowerName.endsWith('.xlsx') || 
-                  lowerName.endsWith('.xls') || 
-                  lowerName.endsWith('.txt') || 
-                  lowerName.endsWith('.json') ||
-                  lowerName.endsWith('.docx') ||
-                  lowerName.endsWith('.csv')
-                ) {
-                  let source = defaultSource
-                  const lowerPath = `${path}/${file.name}`.toLowerCase()
-                  if (lowerPath.includes('weixin') || lowerPath.includes('micromsg')) source = '微信'
-                  else if (lowerPath.includes('qq')) source = 'QQ'
-                  
-                  filesFound.push({
-                    name: file.name,
-                    path: `${path}/${file.name}`,
-                    size: file.size || 0,
-                    mtime: file.mtime,
-                    source: source
-                  })
-                }
-              }
-            }
-          }
-        } catch (e) {
-          // 忽略无权限或不存在的目录
-        }
-      }
-      
-      await scanDir('Download', 1, '下载目录')
-      await scanDir('Documents', 1, '文档目录')
-      await scanDir('tencent/MicroMsg/Download', 1, '微信')
-      await scanDir('tencent/QQfile_recv', 1, 'QQ')
-      
-      // 去重
-      const uniqueFilesMap = new Map()
-      filesFound.forEach(f => uniqueFilesMap.set(f.path, f))
-      const uniqueFiles = Array.from(uniqueFilesMap.values())
-      
-      uniqueFiles.sort((a, b) => (b.mtime || 0) - (a.mtime || 0))
-      setScannedFiles(uniqueFiles)
-    } catch (err) {
-      console.error(err)
-      message.error('扫描手机文件失败')
-    } finally {
-      setScanning(false)
-    }
   }
 
   const handleImportMobileFile = async (file: any) => {
@@ -1257,7 +1178,7 @@ C.选项三  D.选项四
             {isCapacitor && (
               <Button
                 type="primary"
-                icon={<FileSearchOutlined />}
+                icon={<FolderOpenOutlined />}
                 onClick={handleScanMobileFiles}
                 style={{
                   width: '100%',
@@ -1269,7 +1190,7 @@ C.选项三  D.选项四
                   fontWeight: 500
                 }}
               >
-                一键扫描手机文档
+                如何导入微信/QQ文件？
               </Button>
             )}
             <Dropdown menu={{ items: exportMenuItems }} placement="bottomCenter">
@@ -1325,81 +1246,47 @@ C.选项三  D.选项四
 
       {/* 手机端微信/QQ文件扫描导入 Modal */}
       <Modal
-        title={<span style={{ color: '#e2e8f0' }}><FileSearchOutlined /> 一键扫描手机文档</span>}
+        title={<span style={{ color: '#e2e8f0' }}><FolderOpenOutlined /> 导入微信/QQ接收的文件</span>}
         open={mobileScanModalVisible}
         onCancel={() => setMobileScanModalVisible(false)}
         footer={null}
-        width={500}
+        width={400}
       >
-        <div style={{ padding: '8px 0' }}>
-          <div style={{ marginBottom: 16 }}>
-            <Text style={{ color: '#94a3b8', fontSize: 13 }}>
-              自动深度扫描手机内包含微信、QQ接收文件在内的公共文档（支持 .xlsx, .xls, .txt, .json, .docx, .csv 格式）。
-            </Text>
+        <div style={{ padding: '8px 0', color: '#cbd5e1', fontSize: 14, lineHeight: 1.6 }}>
+          <div style={{ marginBottom: 16, padding: '12px', background: 'rgba(255,169,64,0.1)', border: '1px solid rgba(255,169,64,0.3)', borderRadius: 8, color: '#ffa940' }}>
+            <span style={{ fontWeight: 600 }}>💡 隐私限制说明：</span><br />
+            受安卓 11 以上系统的 Scoped Storage (分区存储) 隐私限制，应用已经无法直接“偷看”或扫描您的下载目录了。
           </div>
-          <List
-            loading={scanning}
-            dataSource={scannedFiles}
-            renderItem={(file: any) => {
-              const sizeInKb = (file.size / 1024).toFixed(1)
-              const timeStr = file.mtime ? new Date(file.mtime).toLocaleString() : ''
-              
-              // 动态图标颜色
-              let bgColor = 'rgba(22,119,255,0.15)'
-              let iconColor = '#1677ff'
-              let label = '文'
-              
-              if (file.source === '微信') {
-                bgColor = 'rgba(26,173,25,0.15)'
-                iconColor = '#1aad19'
-                label = '微'
-              } else if (file.source === 'QQ') {
-                bgColor = 'rgba(18,183,245,0.15)'
-                iconColor = '#12b7f5'
-                label = 'Q'
-              }
+          
+          <div style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: 8 }}>请按以下 3 步轻松导入：</div>
+          <ol style={{ paddingLeft: 20, marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <li>在微信或 QQ 中点开您收到的题库文件。</li>
+            <li>点击右上角的 <span style={{ background: '#333', padding: '2px 6px', borderRadius: 4 }}>···</span>，选择 <b style={{ color: '#1677ff' }}>保存到手机</b>。</li>
+            <li>点击下方按钮唤起系统文件管理器，在 <b style={{ color: '#1677ff' }}>“最近文件”</b> 或 “Download” 中即可直接看到它并点击导入！</li>
+          </ol>
 
-              return (
-                <List.Item
-                  actions={[
-                    <Button 
-                      type="primary" 
-                      size="small" 
-                      onClick={() => handleImportMobileFile(file)}
-                      style={{ borderRadius: 6 }}
-                    >
-                      导入
-                    </Button>
-                  ]}
-                  style={{
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    padding: '12px 4px'
-                  }}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 8,
-                        background: bgColor,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: iconColor,
-                        fontSize: 18, fontWeight: 700
-                      }}>
-                        {label}
-                      </div>
-                    }
-                    title={<span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 13, wordBreak: 'break-all' }}>{file.name}</span>}
-                    description={
-                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                        来源：{file.source} &nbsp;•&nbsp; {sizeInKb} KB &nbsp;•&nbsp; {timeStr}
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )
+          <Button 
+            type="primary" 
+            size="large"
+            icon={<FolderOpenOutlined />}
+            onClick={() => {
+              setMobileScanModalVisible(false);
+              setTimeout(() => {
+                const uploadInput = document.querySelector('.ant-upload input[type="file"]') as HTMLInputElement;
+                if (uploadInput) uploadInput.click();
+              }, 300);
             }}
-            style={{ maxHeight: 400, overflowY: 'auto' }}
-          />
+            style={{ 
+              width: '100%', 
+              height: 44,
+              borderRadius: 8,
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #1677ff, #36cfc9)',
+              border: 'none'
+            }}
+          >
+            唤起原生系统文件管理器
+          </Button>
         </div>
       </Modal>
 
