@@ -152,7 +152,7 @@ const Settings: React.FC = () => {
           okText: '复制当前数据并切换',
           cancelText: '创建新空数据库',
           okButtonProps: { style: { background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none' } },
-          cancelButtonProps: { style: { color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)' } },
+          cancelButtonProps: { style: { color: '#ffffff', fontWeight: 600, border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.1)' } },
           onOk: async () => {
             await performSwitch(true)
           },
@@ -172,30 +172,54 @@ const Settings: React.FC = () => {
     }
   }
 
-  const handleDeleteHistoryDir = async (dirToDelete: string) => {
-    try {
-      let history: string[] = []
-      const storedHistory = localStorage.getItem('APP_DB_DIR_HISTORY')
-      if (storedHistory) {
-        history = JSON.parse(storedHistory)
+  const handleDeleteHistoryDir = (dirToDelete: string) => {
+    Modal.confirm({
+      title: '确认删除数据库文件？',
+      content: (
+        <div>
+          <p>您即将从客户端记录中移除以下路径，并<b>彻底删除该目录下的 <Text code>smart-quiz.db</Text> 数据文件</b>。</p>
+          <Text type="danger">注意：此操作不可逆！删除后数据将永久丢失！</Text>
+          <div style={{ marginTop: 8, wordBreak: 'break-all', fontSize: 12, color: '#94a3b8' }}>{dirToDelete}</div>
+        </div>
+      ),
+      okText: '确认删除并销毁数据',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          if ((window as any).__TAURI__) {
+            const { removeFile, exists } = await import('@tauri-apps/api/fs')
+            const { join } = await import('@tauri-apps/api/path')
+            const targetDbPath = await join(dirToDelete, 'smart-quiz.db')
+            if (await exists(targetDbPath)) {
+              await removeFile(targetDbPath)
+            }
+          }
+          
+          let history: string[] = []
+          const storedHistory = localStorage.getItem('APP_DB_DIR_HISTORY')
+          if (storedHistory) {
+            history = JSON.parse(storedHistory)
+          }
+          const newHistory = history.filter(h => normalizePath(h).toLowerCase() !== normalizePath(dirToDelete).toLowerCase())
+          localStorage.setItem('APP_DB_DIR_HISTORY', JSON.stringify(newHistory))
+          
+          const custom = localStorage.getItem('APP_DB_DIR')
+          if (custom && normalizePath(custom).toLowerCase() === normalizePath(dirToDelete).toLowerCase()) {
+            localStorage.removeItem('APP_DB_DIR')
+            message.success('已彻底删除数据库文件，数据存储位置已恢复为系统默认', 1.5).then(() => {
+              window.location.reload()
+            })
+          } else {
+            message.success('已彻底删除该数据库物理文件并移除记录')
+            await loadDbPath()
+          }
+        } catch (e) {
+          console.error(e)
+          message.error('删除数据库物理文件失败，可能文件被占用或无权限')
+        }
       }
-      
-      const newHistory = history.filter(h => normalizePath(h).toLowerCase() !== normalizePath(dirToDelete).toLowerCase())
-      localStorage.setItem('APP_DB_DIR_HISTORY', JSON.stringify(newHistory))
-      
-      const custom = localStorage.getItem('APP_DB_DIR')
-      if (custom && normalizePath(custom).toLowerCase() === normalizePath(dirToDelete).toLowerCase()) {
-        localStorage.removeItem('APP_DB_DIR')
-        message.success('已删除当前路径，数据存储位置已恢复为系统默认', 1.5).then(() => {
-          window.location.reload()
-        })
-      } else {
-        message.success('已从历史记录中移除该路径')
-        await loadDbPath()
-      }
-    } catch (e) {
-      message.error('删除历史路径失败')
-    }
+    })
   }
 
   const handleRestoreDefaultDbPath = async () => {
