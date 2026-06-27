@@ -177,8 +177,8 @@ const Settings: React.FC = () => {
       title: '确认删除数据库文件？',
       content: (
         <div>
-          <p>您即将从客户端记录中移除以下路径，并<b>彻底删除该目录下的 <Text code>smart-quiz.db</Text> 数据文件</b>。</p>
-          <Text type="danger">注意：此操作不可逆！删除后数据将永久丢失！</Text>
+          <p>您即将从客户端记录中移除以下路径，并<b>彻底销毁该目录下的 <Text code>smart-quiz.db</Text> 数据文件</b>。</p>
+          <Text type="danger">注意：此操作不可逆！如果删除后该文件夹为空，系统将自动将其一并抹除以释放空间！</Text>
           <div style={{ marginTop: 8, wordBreak: 'break-all', fontSize: 12, color: '#94a3b8' }}>{dirToDelete}</div>
         </div>
       ),
@@ -188,12 +188,18 @@ const Settings: React.FC = () => {
       onOk: async () => {
         try {
           if ((window as any).__TAURI__) {
-            const { removeFile, exists } = await import('@tauri-apps/api/fs')
+            const { removeFile, exists, readDir, removeDir } = await import('@tauri-apps/api/fs')
             const { join } = await import('@tauri-apps/api/path')
             const targetDbPath = await join(dirToDelete, 'smart-quiz.db')
             if (await exists(targetDbPath)) {
               await removeFile(targetDbPath)
             }
+            try {
+              const entries = await readDir(dirToDelete)
+              if (entries.length === 0) {
+                await removeDir(dirToDelete)
+              }
+            } catch (ignore) {}
           }
           
           let history: string[] = []
