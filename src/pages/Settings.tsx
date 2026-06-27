@@ -84,29 +84,92 @@ const Settings: React.FC = () => {
   const switchDatabaseDir = async (newDir: string | null) => {
     await dbManager.saveNow() // 首先确保当前数据已保存
     
-    if (newDir) {
-      localStorage.setItem('APP_DB_DIR', newDir)
-      
-      let history: string[] = []
-      try {
-        const storedHistory = localStorage.getItem('APP_DB_DIR_HISTORY')
-        if (storedHistory) history = JSON.parse(storedHistory)
-      } catch (e) {}
-      
-      const normNew = normalizePath(newDir).toLowerCase()
-      const hasDuplicate = history.some(h => normalizePath(h).toLowerCase() === normNew)
-      
-      if (!hasDuplicate) {
-        history = [newDir, ...history]
-        localStorage.setItem('APP_DB_DIR_HISTORY', JSON.stringify(history))
-      }
-    } else {
-      localStorage.removeItem('APP_DB_DIR')
+    if (!(window as any).__TAURI__) {
+      return
     }
-    
-    message.success('存储位置已切换，即将重启应用加载新数据', 1.5).then(() => {
-      window.location.reload()
-    })
+
+    try {
+      const { exists, copyFile, createDir } = await import('@tauri-apps/api/fs')
+      const { join, appDataDir } = await import('@tauri-apps/api/path')
+      
+      const targetDir = newDir || await appDataDir()
+      const targetDbPath = await join(targetDir, 'smart-quiz.db')
+      
+      const targetExists = await exists(targetDbPath)
+      
+      const performSwitch = async (shouldCopyCurrent: boolean) => {
+        if (shouldCopyCurrent) {
+          try {
+            const currentCustom = localStorage.getItem('APP_DB_DIR')
+            const currentDir = currentCustom || await appDataDir()
+            const currentDbPath = await join(currentDir, 'smart-quiz.db')
+            
+            await createDir(targetDir, { recursive: true })
+            await copyFile(currentDbPath, targetDbPath)
+            message.success('数据已成功复制到新位置')
+          } catch (e) {
+            console.error(e)
+            message.error('复制数据失败，将直接切换')
+          }
+        }
+        
+        if (newDir) {
+          localStorage.setItem('APP_DB_DIR', newDir)
+          
+          let history: string[] = []
+          try {
+            const storedHistory = localStorage.getItem('APP_DB_DIR_HISTORY')
+            if (storedHistory) history = JSON.parse(storedHistory)
+          } catch (e) {}
+          
+          const normNew = normalizePath(newDir).toLowerCase()
+          const hasDuplicate = history.some(h => normalizePath(h).toLowerCase() === normNew)
+          
+          if (!hasDuplicate) {
+            history = [newDir, ...history]
+            localStorage.setItem('APP_DB_DIR_HISTORY', JSON.stringify(history))
+          }
+        } else {
+          localStorage.removeItem('APP_DB_DIR')
+        }
+        
+        message.success('存储位置已切换，即将重启应用加载新数据', 1.5).then(() => {
+          window.location.reload()
+        })
+      }
+
+      if (!targetExists) {
+        Modal.confirm({
+          title: '未检测到数据库文件 📂',
+          width: 420,
+          content: (
+            <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 8 }}>
+              目标位置未检测到 <Text code style={{ color: '#818cf8', background: 'rgba(129,140,248,0.1)' }}>smart-quiz.db</Text> 数据库文件。
+              <br /><br />
+              您是希望将<b>当前正在使用的数据复制并迁移</b>到新位置，还是<b>在此处创建一个全新的空白数据库</b>？
+            </div>
+          ),
+          okText: '复制当前数据并切换',
+          cancelText: '创建新空数据库',
+          okButtonProps: { style: { background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none' } },
+          cancelButtonProps: { style: { color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)' } },
+          onOk: async () => {
+            await performSwitch(true)
+          },
+          onCancel: async (closeInfo) => {
+            if (closeInfo && (closeInfo as any).triggerCancel) {
+              return
+            }
+            await performSwitch(false)
+          }
+        })
+      } else {
+        await performSwitch(false)
+      }
+    } catch (err) {
+      console.error(err)
+      message.error('切换存储目录失败')
+    }
   }
 
   const handleDeleteHistoryDir = async (dirToDelete: string) => {
