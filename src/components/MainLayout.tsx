@@ -326,7 +326,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <Content id="main-scroll-container" className="responsive-content-padding" style={{
           margin: 0,
           padding: isMobile ? '72px 12px 24px' : '24px 28px',
-          overflow: 'auto',
+          overflowX: 'hidden',
+          overflowY: 'auto',
           height: '100vh',
           background: 'transparent',
           position: 'relative',

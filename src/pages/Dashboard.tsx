@@ -159,7 +159,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="animate-float-up">
       {/* Header */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <Title level={3} style={{ margin: 0, color: '#e2e8f0', fontWeight: 700 }}>
             学习概览 📊

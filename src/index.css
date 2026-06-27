@@ -87,3 +87,30 @@
     padding: 16px 12px !important;
   }
 }
+
+/* 移动端防溢出全局修复 */
+body, #root, .ant-layout {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.ant-card {
+  max-width: 100%;
+}
+
+.ant-table-wrapper {
+  max-width: 100%;
+}
+
+/* 覆盖 Antd 弹窗在移动端可能产生的超宽 */
+.ant-modal {
+  max-width: calc(100vw - 16px) !important;
+  margin: 8px auto !important;
+}
+
+/* 修复长字符串导致的撑开 */
+.ant-card-head-title, .ant-typography, .ant-alert-message, .ant-alert-description, .ant-form-item-extra {
+  word-wrap: break-word;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
