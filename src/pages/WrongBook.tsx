@@ -113,9 +113,10 @@ const WrongBook: React.FC = () => {
   const columns = [
     {
       title: '题目',
+      ellipsis: true,
       render: (_: any, record: QuizRecord & { question: Question }) => (
-        <Tooltip title={record.question.content}>
-          <Text ellipsis style={{ maxWidth: 350, fontSize: 13, color: '#cbd5e1' }}>
+        <Tooltip title={record.question.content} placement="topLeft">
+          <Text ellipsis style={{ fontSize: 13, color: '#cbd5e1', display: 'block', margin: 0 }}>
             {record.question.content}
           </Text>
         </Tooltip>
