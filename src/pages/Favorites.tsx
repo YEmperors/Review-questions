@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   Card, Table, Tag, Space, Button, Select, Typography,
-  Empty, Modal, message, Popconfirm, Row, Col, Input, FloatButton
+  Empty, Modal, message, Popconfirm, Row, Col, Input, FloatButton, Switch, Tooltip
 } from 'antd'
 import {
   StarFilled, DeleteOutlined, SendOutlined, SearchOutlined
@@ -38,6 +38,9 @@ const Favorites: React.FC = () => {
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [practiceModalVisible, setPracticeModalVisible] = useState(false)
+  const [shuffleQuestions, setShuffleQuestions] = useState(false)
+  const [shuffleOptions, setShuffleOptions] = useState(false)
 
   const loadData = () => {
     const favIds = getFavorites()
@@ -73,19 +76,38 @@ const Favorites: React.FC = () => {
 
   const handleStartPractice = () => {
     if (questions.length === 0) return
-    sessionStorage.setItem('quiz_config', JSON.stringify({ mode: 'practice', timeLimit: null }))
-    sessionStorage.setItem('quiz_questions', JSON.stringify(questions))
+    setPracticeModalVisible(true)
+  }
+
+  const handlePracticeConfirm = () => {
+    if (questions.length === 0) return
+    let targetQuestions = [...questions]
+    
+    if (shuffleQuestions) {
+      targetQuestions = [...targetQuestions].sort(() => Math.random() - 0.5)
+    }
+
+    sessionStorage.setItem('quiz_config', JSON.stringify({
+      mode: 'practice',
+      timeLimit: null,
+      shuffleOptions: shuffleOptions
+    }))
+    sessionStorage.setItem('quiz_questions', JSON.stringify(targetQuestions))
     sessionStorage.removeItem('quiz_results')
+    setPracticeModalVisible(false)
     navigate('/quiz')
   }
 
   const columns = [
     {
       title: '题目',
+      ellipsis: true,
       render: (_: unknown, record: Question) => (
-        <Text ellipsis style={{ maxWidth: 360, fontSize: 13, color: '#cbd5e1' }}>
-          {record.content}
-        </Text>
+        <Tooltip title={record.content} placement="topLeft">
+          <Text ellipsis style={{ fontSize: 13, color: '#cbd5e1', display: 'block', margin: 0 }}>
+            {record.content}
+          </Text>
+        </Tooltip>
       ),
     },
 
@@ -378,6 +400,44 @@ const Favorites: React.FC = () => {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* 练习选项配置 Modal */}
+      <Modal
+        title={<span style={{ color: '#e2e8f0' }}>开始练习配置</span>}
+        open={practiceModalVisible}
+        onOk={handlePracticeConfirm}
+        onCancel={() => setPracticeModalVisible(false)}
+        okText="开始练习"
+        cancelText="取消"
+        width={360}
+      >
+        <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#e2e8f0' }}>打乱题目顺序</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>打乱所选题目的做题顺序</div>
+            </div>
+            <Switch
+              checked={shuffleQuestions}
+              onChange={setShuffleQuestions}
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#e2e8f0' }}>打乱选项顺序</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>打乱选择题的选项展示顺序</div>
+            </div>
+            <Switch
+              checked={shuffleOptions}
+              onChange={setShuffleOptions}
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+            />
+          </div>
+        </div>
       </Modal>
 
       <FloatButton.BackTop style={{ right: '50%', transform: 'translateX(50%)', bottom: 24 }} visibilityHeight={100} target={() => document.querySelector('.ant-table-body') || window as any} />
