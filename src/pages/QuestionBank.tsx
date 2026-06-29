@@ -576,9 +576,35 @@ const QuestionBankPage: React.FC = () => {
         }
 
         if (questionsToInsert.length > 0) {
-          createQuestionsBatch(questionsToInsert)
-          message.success(`成功导入 ${questionsToInsert.length} 道题目`)
-          loadQuestions()
+          // 1. 获取目标题库已有的所有题目，用于查重
+          const existingQuestions = getQuestions({ bankId: finalBankId })
+          const existingContentSet = new Set(existingQuestions.map(q => q.content.trim()))
+
+          // 2. 过滤掉重复题目（包含防止导入文件内部自身重复）
+          const uniqueQuestionsToInsert: any[] = []
+          let duplicateCount = 0
+
+          questionsToInsert.forEach((q: any) => {
+            const trimmedContent = q.content.trim()
+            if (existingContentSet.has(trimmedContent)) {
+              duplicateCount++
+            } else {
+              uniqueQuestionsToInsert.push(q)
+              existingContentSet.add(trimmedContent)
+            }
+          })
+
+          if (uniqueQuestionsToInsert.length > 0) {
+            createQuestionsBatch(uniqueQuestionsToInsert)
+            if (duplicateCount > 0) {
+              message.success(`成功导入 ${uniqueQuestionsToInsert.length} 道题目，忽略了 ${duplicateCount} 道重复题目`)
+            } else {
+              message.success(`成功导入 ${uniqueQuestionsToInsert.length} 道题目`)
+            }
+            loadQuestions()
+          } else {
+            message.warning(`导入失败：检测到选中的 ${duplicateCount} 道题目已全部存在`)
+          }
         } else {
           message.warning('未找到有效题目数据，请检查文件格式')
         }
