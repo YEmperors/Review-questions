@@ -803,9 +803,20 @@ const QuizPage: React.FC = () => {
                       color: '#22c55e',
                       fontFamily: undefined,
                     }}>
-                      {currentQuestion.answer}
+                      {getAnswerDetails(currentQuestion, currentQuestion.answer)}
                     </Text>
                   </div>
+                  {answerStatus === 'wrong' && (
+                    <div style={{ marginTop: 6 }}>
+                      <Text style={{ color: '#94a3b8' }}>您的答案：</Text>
+                      <Text strong style={{
+                        color: '#ef4444',
+                        fontFamily: undefined,
+                      }}>
+                        {getAnswerDetails(currentQuestion, currentResult.userAnswer)}
+                      </Text>
+                    </div>
+                  )}
                   {currentQuestion.analysis && (
                     <div style={{
                       marginTop: 10,
@@ -1009,6 +1020,23 @@ function getOptions(question: Question): string[] {
   } catch {
     return []
   }
+}
+
+function getAnswerDetails(question: Question, answerStr: string): string {
+  if (!answerStr) return ''
+  if (['single', 'multiple', 'judge'].includes(question.type)) {
+    const options = getOptions(question)
+    const letters = answerStr.split('')
+    const details = letters.map(letter => {
+      const idx = letter.charCodeAt(0) - 65
+      if (idx >= 0 && idx < options.length) {
+        return `${letter}. ${options[idx]}`
+      }
+      return letter
+    })
+    return details.join('； ')
+  }
+  return answerStr
 }
 
 export default QuizPage

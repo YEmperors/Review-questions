@@ -41,7 +41,7 @@ const WrongBook: React.FC = () => {
   const [practiceModalVisible, setPracticeModalVisible] = useState(false)
   const [shuffleQuestions, setShuffleQuestions] = useState(false)
   const [shuffleOptions, setShuffleOptions] = useState(false)
-  const [practiceType, setPracticeType] = useState<'all' | 'due'>('all')
+  const [practiceType, setPracticeType] = useState<'all' | 'due' | 'selected'>('all')
 
   const loadData = useCallback(() => {
     setWrongRecords(getWrongQuestionsWithQuestions(selectedType, searchText))
@@ -91,6 +91,10 @@ const WrongBook: React.FC = () => {
     let targetQuestions: Question[] = []
     if (practiceType === 'all') {
       targetQuestions = wrongRecords.map(r => r.question)
+    } else if (practiceType === 'selected') {
+      targetQuestions = wrongRecords
+        .filter(r => selectedRowKeys.includes(r.id))
+        .map(r => r.question)
     } else {
       targetQuestions = [...dueQuestions]
     }
@@ -317,6 +321,18 @@ const WrongBook: React.FC = () => {
             />
             {selectedRowKeys.length > 0 && (
               <Space>
+                <Button
+                  type="primary"
+                  icon={<PlayCircleOutlined />}
+                  size="small"
+                  onClick={() => {
+                    setPracticeType('selected')
+                    setPracticeModalVisible(true)
+                  }}
+                  style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', border: 'none' }}
+                >
+                  重做选中 ({selectedRowKeys.length})
+                </Button>
                 <Button icon={<StarOutlined />} size="small" onClick={() => {
                   const favIds = getFavorites()
                   let addedCount = 0
