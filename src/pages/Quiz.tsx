@@ -51,6 +51,14 @@ const QuizPage: React.FC = () => {
   const [focusedOptionIndex, setFocusedOptionIndex] = useState<number>(-1)
   const [shuffledMaps, setShuffledMaps] = useState<number[][]>([])
   const questionStartRef = useRef(Date.now())
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // 当题目切换时，重置聚焦索引
   useEffect(() => {
@@ -310,6 +318,8 @@ const QuizPage: React.FC = () => {
 
   // 键盘快捷键
   useEffect(() => {
+    if (isMobile) return
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // 1. 如果有弹窗打开（例如 antd 的 Modal），则忽略所有快捷键，避免冲突
       if (document.querySelector('.ant-modal-root')) {
@@ -476,7 +486,7 @@ const QuizPage: React.FC = () => {
   const getButtonShortcutText = () => {
     const isCtrl = currentQuestion.type === 'multiple' || currentQuestion.type === 'short_answer'
     const btnAction = mode === 'exam' ? (currentIndex === questions.length - 1 ? '交卷' : '下一题') : '提交答案'
-    return `${btnAction} (${isCtrl ? 'Ctrl + Enter' : 'Enter'})`
+    return isMobile ? btnAction : `${btnAction} (${isCtrl ? 'Ctrl + Enter' : 'Enter'})`
   }
 
   return (
@@ -724,10 +734,12 @@ const QuizPage: React.FC = () => {
 
 
             <div style={{ marginTop: 24, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-              <Text style={{ fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <KeyOutlined />
-                {getShortcutHint()}
-              </Text>
+              {!isMobile && (
+                <Text style={{ fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <KeyOutlined />
+                  {getShortcutHint()}
+                </Text>
+              )}
               <Button
                 type="primary"
                 size="large"
@@ -847,10 +859,12 @@ const QuizPage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-              <Text style={{ fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <KeyOutlined />
-                {isFinished ? '' : 'Enter / → / N 下一题'}
-              </Text>
+              {!isMobile && !isFinished && (
+                <Text style={{ fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <KeyOutlined />
+                  Enter / → / N 下一题
+                </Text>
+              )}
               {isFinished ? (
                 <Button
                   type="primary"

@@ -50,7 +50,7 @@ export async function callAI(prompt: string): Promise<string> {
  */
 export async function generateQuestionWithAI(
   topic: string,
-  type: QuestionType,
+  types: QuestionType[],
   count: number = 1
 ): Promise<string> {
   const typeNames: Record<QuestionType, string> = {
@@ -61,21 +61,26 @@ export async function generateQuestionWithAI(
     [QuestionType.SHORT_ANSWER]: '简答题'
   }
 
-  const prompt = `请生成 ${count} 道"${topic}"相关的${typeNames[type]}。
+  const selectedTypeNames = types.map(t => typeNames[t]).join('、')
 
-请严格按照以下JSON格式输出（数组），不要输出其他内容：
+  const prompt = `请生成总共 ${count} 道与"${topic}"相关的题目。
+可选的题型为：${selectedTypeNames}。
+请在这几种选定题型中合理分配数量，生成总共 ${count} 道题。
+
+请严格按照以下 JSON 格式输出（必须是一个包含以下对象的 JSON 数组），不要输出任何 markdown 代码块之外的解释文字，确保可以直接被 JSON.parse 解析：
 [
   {
+    "type": "题型标识（单选题填 'single'，多选题填 'multiple'，判断题填 'judge'，填空题填 'fill'，简答题填 'short_answer'，必须与生成题目的实际题型一致）",
     "content": "题目内容",
     "options": ["A选项", "B选项", "C选项", "D选项"],
-    "answer": "正确答案（选择题填选项字母如A，多选题如AB，判断题填对/错，填空题填答案，简答题填要点）",
+    "answer": "正确答案（单选题填选项字母如 A，多选题如 AB，判断题填 对/错，填空题填答案，简答题填要点）",
     "analysis": "详细解析"
   }
 ]
 
 注意：
-- 判断题options填["对","错"]
-- 填空题options为null，answer为填空的正确内容
+- 判断题 options 填 ["对", "错"]
+- 填空题和简答题的 options 为 null，其中填空题的 answer 为填空的正确内容，简答题的 answer 为答题要点
 - 确保答案准确无误`
 
   return callAI(prompt)

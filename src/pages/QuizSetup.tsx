@@ -112,12 +112,27 @@ const QuizSetup: React.FC = () => {
         return
       }
 
+      // 按照正常的试卷逻辑排序：单选 -> 多选 -> 判断 -> 填空 -> 简答
+      const typeOrder: Record<string, number> = {
+        'single': 1,
+        'multiple': 2,
+        'judge': 3,
+        'fill': 4,
+        'short_answer': 5
+      }
+      
+      const sortedQuestions = [...questions].sort((a, b) => {
+        const orderA = typeOrder[a.type] || 99
+        const orderB = typeOrder[b.type] || 99
+        return orderA - orderB
+      })
+
       sessionStorage.setItem('quiz_config', JSON.stringify({
         mode,
         timeLimit: values.timeLimit || null,
         shuffleOptions: !!values.shuffleOptions
       }))
-      sessionStorage.setItem('quiz_questions', JSON.stringify(questions))
+      sessionStorage.setItem('quiz_questions', JSON.stringify(sortedQuestions))
       sessionStorage.removeItem('quiz_results')
 
       navigate('/quiz')

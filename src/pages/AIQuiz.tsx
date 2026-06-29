@@ -18,6 +18,14 @@ const { Title, Text, Paragraph } = Typography
 const { Option } = Select
 const { TextArea } = Input
 
+const typeNames: Record<string, string> = {
+  single: '单选题',
+  multiple: '多选题',
+  judge: '判断题',
+  fill: '填空题',
+  short_answer: '简答题'
+}
+
 const AIQuiz: React.FC = () => {
   const navigate = useNavigate()
   const [form] = Form.useForm()
@@ -42,7 +50,7 @@ const AIQuiz: React.FC = () => {
       try {
         const result = await generateQuestionWithAI(
           values.topic,
-          values.type,
+          values.types,
           values.count
         )
         setAiResult(result)
@@ -52,7 +60,7 @@ const AIQuiz: React.FC = () => {
         // 自动保存到题库
         const bankId = values.bank_id || 1
         const toInsert = questions.map(q => ({
-          type: values.type,
+          type: q.type || values.types[0] || 'single',
           content: q.content || '',
           options: q.options ? JSON.stringify(q.options) : null,
           answer: typeof q.answer === 'string' ? q.answer : JSON.stringify(q.answer) || '',
@@ -90,8 +98,9 @@ const AIQuiz: React.FC = () => {
 
     try {
       const bankId = form.getFieldValue('bank_id') || 1
+      const selectedTypes = form.getFieldValue('types') || []
       const toInsert = parsedQuestions.map(q => ({
-        type: form.getFieldValue('type'),
+        type: q.type || selectedTypes[0] || 'single',
         content: q.content || '',
         options: q.options ? JSON.stringify(q.options) : null,
         answer: q.answer || '',
@@ -114,9 +123,10 @@ const AIQuiz: React.FC = () => {
     if (parsedQuestions.length === 0) return
 
     const bankId = form.getFieldValue('bank_id') || 1
+    const selectedTypes = form.getFieldValue('types') || []
     const questions = parsedQuestions.map(q => ({
       id: 0,
-      type: form.getFieldValue('type'),
+      type: q.type || selectedTypes[0] || 'single',
       content: q.content || '',
       options: q.options ? JSON.stringify(q.options) : null,
       answer: q.answer || '',
@@ -145,12 +155,12 @@ const AIQuiz: React.FC = () => {
         onClick={() => navigate('/settings')}
       />
 
-      <Card title="出题设置">
+          <Card title="出题设置">
         <Form
           form={form}
           layout="vertical"
           initialValues={{
-            type: 'single',
+            types: ['single'],
             count: 5,
             bank_id: 1
           }}
@@ -159,9 +169,9 @@ const AIQuiz: React.FC = () => {
             <Input placeholder="例如：线性代数、TCP协议、光合作用" />
           </Form.Item>
 
-          <Space size="large">
-            <Form.Item name="type" label="题型" rules={[{ required: true }]}>
-              <Select style={{ width: 150 }}>
+          <Space size="large" align="start">
+            <Form.Item name="types" label="题型（可多选）" rules={[{ required: true, message: '请至少选择一种题型' }]}>
+              <Select mode="multiple" placeholder="请选择题型" style={{ minWidth: 220, maxWidth: 400 }}>
                 <Option value="single">单选题</Option>
                 <Option value="multiple">多选题</Option>
                 <Option value="judge">判断题</Option>
@@ -221,7 +231,9 @@ const AIQuiz: React.FC = () => {
             renderItem={(q, idx) => (
               <List.Item>
                 <div style={{ width: '100%' }}>
-                  <Text strong>{idx + 1}. {q.content}</Text>
+                  <Text strong>
+                    {idx + 1}. <Tag color="blue">{typeNames[q.type] || '题目'}</Tag> {q.content}
+                  </Text>
                   {q.options && (
                     <div style={{ marginTop: 8 }}>
                       {q.options.map((opt: string, oi: number) => (
