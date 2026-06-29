@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "smart-quiz-app",
-    "version": "0.1.14"
+    "version": "2.0.4"
   },
   "tauri": {
     "allowlist": {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import packageInfo from '../../package.json'
 import { Layout, Menu, Typography, Badge, Tooltip, Drawer, Button } from 'antd'
 import {
   DashboardOutlined,
@@ -318,7 +319,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               color: '#374151',
               fontSize: 11,
             }}>
-              v1.0.0
+              v{packageInfo.version}
             </div>
           )}
         </Sider>
