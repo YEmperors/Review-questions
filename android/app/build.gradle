@@ -1,14 +1,36 @@
 apply plugin: 'com.android.application'
 
+import groovy.json.JsonSlurper
+
+def getPackageJson() {
+    def jsonFile = file('../../package.json')
+    return new JsonSlurper().parseText(jsonFile.text)
+}
+
+def parsedJson = getPackageJson()
+def semVer = parsedJson.version
+def versionParts = semVer.split('\\.')
+def vCode = versionParts[0].toInteger() * 10000 + versionParts[1].toInteger() * 100 + versionParts[2].toInteger()
+
 android {
     namespace = "com.smartquiz.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     defaultConfig {
         applicationId "com.smartquiz.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode vCode
+        versionName semVer
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -20,6 +42,10 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+        }
+        debug {
+            signingConfig signingConfigs.debug
         }
     }
     lintOptions {
