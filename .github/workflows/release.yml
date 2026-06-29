@@ -10,10 +10,30 @@ permissions:
   contents: write
 
 jobs:
-  build-android:
+  create-release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          gh release view "v${VERSION}" || gh release create "v${VERSION}" -t "智能刷题 v${VERSION}" -n "🤖 智能刷题客户端最新发布！本版本包含安卓手机端 (APK) 和 Windows 桌面端 (MSI/Portable)。"
+
+  build-android:
+    needs: create-release
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,26 +66,58 @@ jobs:
           ./gradlew assembleDebug --stacktrace --info > gradle_build.log 2>&1 || (cat gradle_build.log && exit 1)
           cd ..
 
-      - name: Upload Android APK as Action Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: ignore
-
-      - name: Upload Gradle Logs (If Failed)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-logs
-          path: android/gradle_build.log
-
       - name: Upload Android APK to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          cp android/app/build/outputs/apk/debug/app-debug.apk ./smart-quiz-app-v${VERSION}.apk || echo "APK File Missing!"
-          # 如果 Release 不存在，就先创建一个
-          gh release view "v${VERSION}" || gh release create "v${VERSION}" -t "Smart Quiz App v${VERSION}" -n "这是智能刷题客户端的最新安卓版本。"
-          gh release upload "v${VERSION}" ./smart-quiz-app-v${VERSION}.apk --clobber || echo "Release upload failed, but artifact is available."
+          VERSION="${{ needs.create-release.outputs.version }}"
+          cp android/app/build/outputs/apk/debug/app-debug.apk ./smart-quiz-app-v${VERSION}.apk
+          gh release upload "v${VERSION}" ./smart-quiz-app-v${VERSION}.apk --clobber
+
+  build-desktop:
+    needs: create-release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      - name: Build Tauri App
+        run: npm run tauri build
+
+      - name: Prepare Desktop Assets & Upload
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $VERSION = "${{ needs.create-release.outputs.version }}"
+          $targetDir = "src-tauri\target\release"
+          $standaloneExe = "$targetDir\smart-quiz-app.exe"
+          $portableZip = "smart-quiz-app-portable-v$VERSION.zip"
+          
+          # 1. 创建并上传免安装 zip
+          if (Test-Path $standaloneExe) {
+              Compress-Archive -Path $standaloneExe -DestinationPath $portableZip -Force
+              gh release upload "v$VERSION" $portableZip --clobber
+              Write-Host "Uploaded $portableZip"
+          }
+          
+          # 2. 寻找并上传安装包 (msi)
+          $bundleDir = "$targetDir\bundle"
+          $installerMsi = Get-ChildItem -Path "$bundleDir\msi" -Filter "*.msi" | Select-Object -First 1
+          if ($installerMsi) {
+              $newMsiName = "smart-quiz-app-setup-v$VERSION.msi"
+              Copy-Item $installerMsi.FullName -Destination $newMsiName
+              gh release upload "v$VERSION" $newMsiName --clobber
+              Write-Host "Uploaded $newMsiName"
+          }
