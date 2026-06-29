@@ -252,6 +252,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             styles={{
               body: {
                 padding: 0,
+                paddingTop: 'calc(28px + env(safe-area-inset-top, 0px))',
                 background: 'linear-gradient(180deg, #13131f 0%, #0f0f1a 100%)',
               }
             }}
