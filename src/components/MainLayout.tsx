@@ -202,8 +202,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <>
           {/* 移动端顶栏 Header */}
           <div style={{
-            height: 'calc(56px + env(safe-area-inset-top, 24px))',
-            paddingTop: 'env(safe-area-inset-top, 24px)',
+            height: 'calc(84px + env(safe-area-inset-top, 0px))',
+            paddingTop: 'calc(28px + env(safe-area-inset-top, 0px))',
             background: 'linear-gradient(90deg, #13131f 0%, #0f0f1a 100%)',
             borderBottom: '1px solid rgba(255,255,255,0.06)',
             display: 'flex',
@@ -328,7 +328,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <Layout style={{ background: 'transparent' }}>
         <Content id="main-scroll-container" className="responsive-content-padding" style={{
           margin: 0,
-          paddingTop: isMobile ? 'calc(64px + env(safe-area-inset-top, 24px))' : 24,
+          paddingTop: isMobile ? 'calc(92px + env(safe-area-inset-top, 0px))' : 24,
           paddingRight: isMobile ? 'calc(8px + env(safe-area-inset-right, 0px))' : 28,
           paddingBottom: isMobile ? 'calc(24px + env(safe-area-inset-bottom, 16px))' : 24,
           paddingLeft: isMobile ? 'calc(8px + env(safe-area-inset-left, 0px))' : 28,
